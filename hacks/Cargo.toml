@@ -9,7 +9,7 @@ license = "AGPL-3.0-only"
 version = "0.1.0"
 
 [dependencies]
-archivindex = { path = "../core/" }
+archivindex-wbm = { path = "../wbm/" }
 chrono = { version = "0.4", features = ["serde"] }
 cli-helpers = "0.1"
 csv = "1"

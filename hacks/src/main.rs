@@ -1,4 +1,4 @@
-use archivindex::{
+use archivindex_wbm::{
     cdx::{item::ItemList, mime_type::MimeType},
     surt::Surt,
 };
@@ -64,7 +64,7 @@ pub enum Error {
     #[error("JSON error")]
     Json(#[from] serde_json::Error),
     #[error("SURT error")]
-    Surt(#[from] archivindex::surt::Error),
+    Surt(#[from] archivindex_wbm::surt::Error),
 }
 
 #[derive(Debug, Parser)]
