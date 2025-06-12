@@ -275,6 +275,7 @@ impl Serialize for Sha1Digest {
         serializer.serialize_str(&self.to_string())
     }
 }
+
 pub mod sha1_base32 {
     use super::Sha1Digest;
     use serde::{

@@ -3,6 +3,8 @@ use archivindex_wbm::{
     surt::Surt,
 };
 use cli_helpers::prelude::*;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 #[tokio::main]
@@ -11,6 +13,25 @@ async fn main() -> Result<(), Error> {
     opts.verbose.init_logging()?;
 
     match opts.command {
+        Command::ValidatedWxjLines { input } => {
+            let validation = if input.as_os_str().to_string_lossy().ends_with("zst") {
+                let lines = BufReader::new(zstd::Decoder::new(File::open(input)?)?).lines();
+
+                archivindex_wxj::lines::SnapshotLine::validate_lines(lines)
+            } else {
+                let lines = BufReader::new(File::open(input)?).lines();
+
+                archivindex_wxj::lines::SnapshotLine::validate_lines(lines)
+            }?;
+
+            println!("Successful: {}", validation.valid_count);
+            println!("Invalid lines: {}", validation.invalid_lines.len());
+            println!(
+                "Unexpected digests: {}",
+                validation.unexpected_digests.len()
+            );
+            println!("Out of order lines: {}", validation.out_of_order.len());
+        }
         Command::CheckSurts { input } => {
             let cdx_paths = find_cdx_files(input)?;
             let mut success_count = 0;
@@ -78,6 +99,10 @@ struct Opts {
 
 #[derive(Debug, Parser)]
 enum Command {
+    ValidatedWxjLines {
+        #[clap(long)]
+        input: PathBuf,
+    },
     CheckSurts {
         #[clap(long)]
         input: PathBuf,

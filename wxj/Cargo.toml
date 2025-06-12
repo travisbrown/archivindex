@@ -1,0 +1,20 @@
+[package]
+name = "archivindex-wxj"
+authors = { workspace = true }
+repository = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+version = { workspace = true }
+
+[dependencies]
+archivindex-wbm = { path = "../wbm/" }
+chrono = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha1 = { workspace = true }
+thiserror = { workspace = true }
+zstd = { workspace = true }
+
+[dev-dependencies]
+quickcheck = { workspace = true }
