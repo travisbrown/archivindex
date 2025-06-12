@@ -1,0 +1,1 @@
+{ "rust-analyzer.linkedProjects": ["Cargo.toml", "hacks/Cargo.toml"] }

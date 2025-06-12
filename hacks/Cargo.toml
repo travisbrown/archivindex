@@ -1,0 +1,19 @@
+[workspace]
+
+[package]
+name = "archivindex-hacks"
+authors = ["Travis Brown <travisrobertbrown@gmail.com>"]
+repository = "https://github.com/travisbrown/archivindex"
+edition = "2024"
+license = "AGPL-3.0-only"
+version = "0.1.0"
+
+[dependencies]
+archivindex = { path = "../core/" }
+chrono = { version = "0.4", features = ["serde"] }
+cli-helpers = "0.1"
+csv = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
