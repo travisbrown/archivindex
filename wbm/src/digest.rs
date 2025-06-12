@@ -275,6 +275,28 @@ impl Serialize for Sha1Digest {
         serializer.serialize_str(&self.to_string())
     }
 }
+pub mod sha1_base32 {
+    use super::Sha1Digest;
+    use serde::{
+        de::{Deserialize, Deserializer},
+        ser::Serializer,
+    };
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Sha1Digest, D::Error> {
+        let value: &str = Deserialize::deserialize(deserializer)?;
+
+        value.parse::<Sha1Digest>().map_err(|_| {
+            serde::de::Error::invalid_value(
+                serde::de::Unexpected::Str(value),
+                &"Base64 SHA-1 digest",
+            )
+        })
+    }
+
+    pub fn serialize<S: Serializer>(value: &Sha1Digest, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&value.to_string())
+    }
+}
 
 #[cfg(test)]
 mod tests {
