@@ -8,6 +8,7 @@ version = { workspace = true }
 
 [dependencies]
 archivindex-wbm = { path = "../wbm/" }
+birdsite = { git = "https://github.com/travisbrown/birdsite.git" }
 chrono = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true }

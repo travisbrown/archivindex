@@ -2,6 +2,8 @@ use archivindex_wbm::{digest::Sha1Digest, timestamp::Timestamp};
 use sha1::{Digest, Sha1};
 use std::borrow::Cow;
 
+pub mod tweet;
+
 const DEFAULT_CLOSING_WHITESPACE: [u8; 3] = [b'\r', b'\r', b'\n'];
 
 #[derive(Debug, thiserror::Error)]
@@ -14,20 +16,19 @@ pub enum Error {
     InvalidClosingWhitespace(String),
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct SnapshotLineValidation {
-    pub valid_count: usize,
-    pub invalid_lines: Vec<usize>,
-    pub unexpected_digests: Vec<(Sha1Digest, Sha1Digest)>,
-    pub out_of_order: Vec<Sha1Digest>,
-}
-
-impl SnapshotLineValidation {
-    pub fn is_successful(&self) -> bool {
-        self.invalid_lines.is_empty()
-            && self.unexpected_digests.is_empty()
-            && self.out_of_order.is_empty()
-    }
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct Snapshot<'a, S> {
+    pub digest: Sha1Digest,
+    pub expected_digest: Option<Sha1Digest>,
+    #[serde(
+        with = "closing_whitespace",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub closing_whitespace: Option<Vec<char>>,
+    pub timestamp: Option<Timestamp>,
+    pub url: Option<Cow<'a, str>>,
+    pub content: S,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -274,6 +275,80 @@ impl<'a> SnapshotLine<'a> {
     }
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct SnapshotLineValidation {
+    pub valid_count: usize,
+    pub invalid_lines: Vec<usize>,
+    pub unexpected_digests: Vec<(Sha1Digest, Sha1Digest)>,
+    pub out_of_order: Vec<Sha1Digest>,
+}
+
+impl SnapshotLineValidation {
+    pub fn is_successful(&self) -> bool {
+        self.invalid_lines.is_empty()
+            && self.unexpected_digests.is_empty()
+            && self.out_of_order.is_empty()
+    }
+}
+
+mod closing_whitespace {
+    use serde::{
+        de::{Deserialize, Deserializer},
+        ser::Serializer,
+    };
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Option<Vec<char>>, D::Error> {
+        let closing_whitespace_str: Option<String> = Deserialize::deserialize(deserializer)?;
+
+        closing_whitespace_str
+            .map(|closing_whitespace_str| {
+                let closing_whitespace = closing_whitespace_str
+                    .chars()
+                    .filter(|whitespace| *whitespace == '\n' || *whitespace == '\r')
+                    .collect::<Vec<_>>();
+
+                if closing_whitespace.len() != closing_whitespace_str.len() {
+                    Err(serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Str(&closing_whitespace_str),
+                        &"string of escaped whitespace characters",
+                    ))
+                } else {
+                    Ok(closing_whitespace)
+                }
+            })
+            .map_or(Ok(None), |value| value.map(Some))
+    }
+
+    pub fn serialize<S: Serializer>(
+        value: &Option<Vec<char>>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        match value {
+            Some(value) => {
+                let mut closing_whitespace_str = String::new();
+
+                for whitespace in value {
+                    match whitespace {
+                        '\n' => closing_whitespace_str.push_str("\\n"),
+                        '\r' => closing_whitespace_str.push_str("\\r"),
+                        other => {
+                            return Err(serde::ser::Error::custom(format!(
+                                "unexpected escaped whitespace character: {}",
+                                other
+                            )));
+                        }
+                    }
+                }
+
+                serializer.serialize_some(&closing_whitespace_str)
+            }
+            None => serializer.serialize_none(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::BufRead;
@@ -305,6 +380,40 @@ mod tests {
         let validation = SnapshotLine::validate_lines(lines)?;
 
         assert!(validation.is_successful());
+
+        Ok(())
+    }
+
+    #[test]
+    fn deserialize_examples() -> Result<(), Box<dyn std::error::Error>> {
+        let lines = include_str!("../../../examples/wxj/lines-01.ndjson").split("\n");
+
+        for line in lines {
+            let _snapshot =
+                serde_json::from_str::<Snapshot<crate::lines::tweet::data::TweetSnapshot>>(line)?;
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn snapshot_line_snapshot_match() -> Result<(), Box<dyn std::error::Error>> {
+        let lines = include_str!("../../../examples/wxj/lines-01.ndjson").split("\n");
+
+        for line in lines {
+            let snapshot_line = SnapshotLine::parse(line)?;
+            let snapshot =
+                serde_json::from_str::<Snapshot<crate::lines::tweet::data::TweetSnapshot>>(line)?;
+
+            assert_eq!(snapshot_line.digest, snapshot.digest);
+            assert_eq!(snapshot_line.expected_digest, snapshot.expected_digest);
+            assert_eq!(
+                snapshot_line.closing_whitespace,
+                snapshot.closing_whitespace
+            );
+            assert_eq!(snapshot_line.timestamp, snapshot.timestamp);
+            assert_eq!(snapshot_line.url, snapshot.url);
+        }
 
         Ok(())
     }
