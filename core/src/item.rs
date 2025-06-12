@@ -1,5 +1,6 @@
 use crate::{digest::Digest, timestamp::Timestamp};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
@@ -15,14 +16,17 @@ pub enum Error {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Ord, PartialOrd, Serialize)]
-pub struct UrlParts {
-    pub url: String,
+pub struct UrlParts<'a> {
+    pub url: Cow<'a, str>,
     pub timestamp: Timestamp,
 }
 
-impl UrlParts {
-    pub fn new(url: String, timestamp: Timestamp) -> Self {
-        Self { url, timestamp }
+impl<'a> UrlParts<'a> {
+    pub fn new<S: Into<Cow<'a, str>>>(url: S, timestamp: Timestamp) -> Self {
+        Self {
+            url: url.into(),
+            timestamp,
+        }
     }
 
     pub fn to_wb_url(&self, https: bool, original: bool) -> String {
@@ -36,7 +40,7 @@ impl UrlParts {
     }
 }
 
-impl FromStr for UrlParts {
+impl FromStr for UrlParts<'static> {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -55,9 +59,10 @@ impl FromStr for UrlParts {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Ord, PartialOrd, Serialize)]
-pub struct EntryInfo {
-    pub url_parts: UrlParts,
-    pub expected_digest: Digest,
+pub struct ItemInfo<'a> {
+    pub url_parts: UrlParts<'a>,
+    #[serde(borrow)]
+    pub expected_digest: Digest<'a>,
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, SubsecRound, Utc};
 use serde::{
     de::{Deserialize, Deserializer, Unexpected, Visitor},
     ser::{Serialize, Serializer},
@@ -16,6 +16,8 @@ pub enum Error {
     InvalidDateTime(#[from] chrono::format::ParseError),
     #[error("Invalid timestamp")]
     InvalidTimestamp(i64),
+    #[error("Subsecond timestamp input")]
+    SubsecondDateTime(DateTime<Utc>),
 }
 
 /// Represents a Wayback Machine URL timestamp.
@@ -28,9 +30,17 @@ impl Display for Timestamp {
     }
 }
 
-impl From<DateTime<Utc>> for Timestamp {
-    fn from(value: DateTime<Utc>) -> Self {
-        Self(value)
+impl TryFrom<DateTime<Utc>> for Timestamp {
+    type Error = Error;
+
+    fn try_from(value: DateTime<Utc>) -> Result<Self, Self::Error> {
+        let truncated = value.trunc_subsecs(0);
+
+        if truncated == value {
+            Ok(Self(value))
+        } else {
+            Err(Error::SubsecondDateTime(value))
+        }
     }
 }
 

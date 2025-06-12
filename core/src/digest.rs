@@ -10,6 +10,7 @@ use serde::{
     ser::{Serialize, Serializer},
 };
 use sha1::Digest as _;
+use std::borrow::Cow;
 use std::fmt::Display;
 use std::io::{BufWriter, Read, Write};
 use std::str::FromStr;
@@ -80,12 +81,12 @@ impl Default for Sha1Computer {
 }
 
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum Digest {
+pub enum Digest<'a> {
     Valid(Sha1Digest),
-    Invalid(String),
+    Invalid(Cow<'a, str>),
 }
 
-impl Digest {
+impl<'a> Digest<'a> {
     pub fn valid(&self) -> Option<Sha1Digest> {
         match self {
             Self::Valid(digest) => Some(*digest),
@@ -106,30 +107,48 @@ impl Digest {
             Self::Invalid(_) => false,
         }
     }
-}
 
-impl FromStr for Digest {
-    type Err = Error;
+    pub fn map_err<E, F: FnOnce(&str) -> E>(&self, op: F) -> Result<Sha1Digest, E> {
+        match self {
+            Self::Valid(digest) => Ok(*digest),
+            Self::Invalid(digest) => Err(op(digest)),
+        }
+    }
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() == 32 {
+    pub fn parse_str(input: &'a str) -> Result<Self, Error> {
+        if input.len() == 32 {
             let mut output = [0; 20];
             let count = BASE32
-                .decode_mut(s.as_bytes(), &mut output)
+                .decode_mut(input.as_bytes(), &mut output)
                 .map_err(Error::Decoding)?;
 
             if count == 20 {
                 Ok(Self::Valid(Sha1Digest(output)))
             } else {
-                Ok(Self::Invalid(s.to_string()))
+                Ok(Self::Invalid(input.into()))
             }
         } else {
-            Ok(Self::Invalid(s.to_string()))
+            Ok(Self::Invalid(input.into()))
+        }
+    }
+
+    pub fn into_owned(self) -> Digest<'static> {
+        match self {
+            Self::Valid(digest) => Digest::Valid(digest),
+            Self::Invalid(digest) => Digest::Invalid(digest.into_owned().into()),
         }
     }
 }
 
-impl Display for Digest {
+impl FromStr for Digest<'static> {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Digest::parse_str(s).map(|digest| digest.into_owned())
+    }
+}
+
+impl<'a> Display for Digest<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Valid(digest) => digest.fmt(f),
@@ -138,12 +157,12 @@ impl Display for Digest {
     }
 }
 
-impl<'de> Deserialize<'de> for Digest {
+impl<'a, 'de: 'a> Deserialize<'de> for Digest<'a> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct DigestVisitor;
 
-        impl Visitor<'_> for DigestVisitor {
-            type Value = Digest;
+        impl<'de> Visitor<'de> for DigestVisitor {
+            type Value = Digest<'de>;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 formatter.write_str("enum Digest")
@@ -159,9 +178,15 @@ impl<'de> Deserialize<'de> for Digest {
     }
 }
 
-impl Serialize for Digest {
+impl<'a> Serialize for Digest<'a> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'a> From<Sha1Digest> for Digest<'a> {
+    fn from(value: Sha1Digest) -> Self {
+        Self::Valid(value)
     }
 }
 
@@ -176,6 +201,12 @@ impl Sha1Digest {
 impl Display for Sha1Digest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         BASE32.encode(&self.0).fmt(f)
+    }
+}
+
+impl From<Sha1Digest> for [u8; 20] {
+    fn from(value: Sha1Digest) -> Self {
+        value.0
     }
 }
 
@@ -197,6 +228,12 @@ impl FromStr for Sha1Digest {
         } else {
             Err(Self::Err::InvalidLength(s.to_string()))
         }
+    }
+}
+
+impl From<[u8; 20]> for Sha1Digest {
+    fn from(value: [u8; 20]) -> Self {
+        Self(value)
     }
 }
 

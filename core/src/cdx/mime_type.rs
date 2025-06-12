@@ -1,4 +1,5 @@
 use serde::de::{Deserialize, Deserializer, Unexpected, Visitor};
+use std::borrow::Cow;
 use std::fmt::Display;
 use std::str::FromStr;
 
@@ -9,41 +10,58 @@ pub enum Error {
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub enum MimeType {
+pub enum MimeType<'a> {
     TextHtml,
     ApplicationJson,
-    Other(String),
+    Other(Cow<'a, str>),
 }
 
-impl Display for MimeType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<'a> MimeType<'a> {
+    pub fn as_str(&self) -> &str {
         match self {
-            Self::TextHtml => f.write_str("text/html"),
-            Self::ApplicationJson => f.write_str("application/json"),
-            Self::Other(value) => f.write_str(value),
+            Self::TextHtml => "text/html",
+            Self::ApplicationJson => "application/json",
+            Self::Other(value) => value,
         }
     }
-}
-
-impl FromStr for MimeType {
-    type Err = Error;
 
     // TODO: Add validation here.
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+    pub fn parse_str(input: &'a str) -> Result<Self, Error> {
+        match input {
             "text/html" => Ok(Self::TextHtml),
             "application/json" => Ok(Self::ApplicationJson),
-            other => Ok(Self::Other(other.to_string())),
+            other => Ok(Self::Other(other.into())),
+        }
+    }
+
+    pub fn into_owned(self) -> MimeType<'static> {
+        match self {
+            Self::TextHtml => MimeType::TextHtml,
+            Self::ApplicationJson => MimeType::ApplicationJson,
+            Self::Other(other) => MimeType::Other(other.into_owned().into()),
         }
     }
 }
 
-impl<'de> Deserialize<'de> for MimeType {
+impl<'a> Display for MimeType<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl FromStr for MimeType<'static> {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        MimeType::parse_str(s).map(|mime_type| mime_type.into_owned())
+    }
+}
+
+impl<'a, 'de: 'a> Deserialize<'de> for MimeType<'a> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct MimeTypeVisitor;
 
-        impl Visitor<'_> for MimeTypeVisitor {
-            type Value = MimeType;
+        impl<'de> Visitor<'de> for MimeTypeVisitor {
+            type Value = MimeType<'de>;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 formatter.write_str("enum MimeType")
@@ -51,6 +69,14 @@ impl<'de> Deserialize<'de> for MimeType {
 
             fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
                 v.parse()
+                    .map_err(|_| serde::de::Error::invalid_value(Unexpected::Str(v), &self))
+            }
+
+            fn visit_borrowed_str<E: serde::de::Error>(
+                self,
+                v: &'de str,
+            ) -> Result<Self::Value, E> {
+                Self::Value::parse_str(v)
                     .map_err(|_| serde::de::Error::invalid_value(Unexpected::Str(v), &self))
             }
         }
