@@ -317,7 +317,7 @@ mod tests {
     }
 
     #[test]
-    fn from_url_example() {
+    fn from_url_examples() {
         let contents = include_str!("../../examples/cdx/1706619334645856.json");
         let items = serde_json::from_str::<crate::cdx::item::ItemList>(contents).unwrap();
 
