@@ -1,10 +1,11 @@
 use std::{fmt::Display, str::FromStr};
 
-pub const STATUS_CODE_VALUES: [StatusCode; 19] = [
+pub const STATUS_CODE_VALUES: [StatusCode; 20] = [
     StatusCode::Empty,
     StatusCode::Ok,
     StatusCode::MovedPermanently,
     StatusCode::Found,
+    StatusCode::SeeOther,
     StatusCode::TemporaryRedirest,
     StatusCode::BadRequest,
     StatusCode::Unauthorized,
@@ -47,6 +48,8 @@ pub enum StatusCode {
     // Temporary redirect.
     #[serde(alias = "302")]
     Found,
+    #[serde(alias = "303")]
+    SeeOther,
     #[serde(alias = "307")]
     TemporaryRedirest,
     #[serde(alias = "400")]
@@ -92,6 +95,7 @@ impl StatusCode {
             Self::Ok => 200,
             Self::MovedPermanently => 301,
             Self::Found => 302,
+            Self::SeeOther => 303,
             Self::TemporaryRedirest => 307,
             Self::BadRequest => 400,
             Self::Unauthorized => 401,
@@ -116,6 +120,7 @@ impl StatusCode {
             200 => Ok(Self::Ok),
             301 => Ok(Self::MovedPermanently),
             302 => Ok(Self::Found),
+            303 => Ok(Self::SeeOther),
             307 => Ok(Self::TemporaryRedirest),
             400 => Ok(Self::BadRequest),
             401 => Ok(Self::Unauthorized),
@@ -141,6 +146,7 @@ impl StatusCode {
             Self::Ok => "200",
             Self::MovedPermanently => "301",
             Self::Found => "302",
+            Self::SeeOther => "303",
             Self::TemporaryRedirest => "307",
             Self::BadRequest => "400",
             Self::Unauthorized => "401",
@@ -175,6 +181,7 @@ impl FromStr for StatusCode {
             "200" => Ok(Self::Ok),
             "301" => Ok(Self::MovedPermanently),
             "302" => Ok(Self::Found),
+            "303" => Ok(Self::SeeOther),
             "307" => Ok(Self::TemporaryRedirest),
             "400" => Ok(Self::BadRequest),
             "401" => Ok(Self::Unauthorized),
@@ -203,6 +210,7 @@ impl From<StatusCode> for http::status::StatusCode {
             StatusCode::Ok => http::status::StatusCode::OK,
             StatusCode::MovedPermanently => http::status::StatusCode::MOVED_PERMANENTLY,
             StatusCode::Found => http::status::StatusCode::FOUND,
+            StatusCode::SeeOther => http::status::StatusCode::SEE_OTHER,
             StatusCode::TemporaryRedirest => http::status::StatusCode::TEMPORARY_REDIRECT,
             StatusCode::BadRequest => http::status::StatusCode::BAD_REQUEST,
             StatusCode::Unauthorized => http::status::StatusCode::UNAUTHORIZED,
