@@ -6,6 +6,7 @@ use std::borrow::Cow;
 pub struct TweetSnapshot<'a> {
     pub data: Data,
     pub includes: Includes<'a>,
+    pub errors: Option<Vec<Error>>,
 }
 
 impl<'a> TweetSnapshot<'a> {
@@ -25,8 +26,11 @@ pub struct Data {
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Includes<'a> {
-    pub tweets: Vec<Tweet>,
+    pub tweets: Option<Vec<Tweet>>,
     pub users: Vec<User<'a>>,
+    pub media: Option<Vec<Media>>,
+    pub polls: Option<Vec<Poll>>,
+    pub places: Option<Vec<Place>>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -38,3 +42,15 @@ pub struct User<'a> {
     pub id: u64,
     pub username: Cow<'a, str>,
 }
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct Media {}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct Poll {}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct Place {}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct Error {}
