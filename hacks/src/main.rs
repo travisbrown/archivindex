@@ -1,11 +1,18 @@
 use archivindex_wbm::{
     cdx::{item::ItemList, mime_type::MimeType},
+    digest,
     surt::Surt,
+};
+use archivindex_wxj::lines::{
+    Snapshot, SnapshotLine,
+    tweet::{TweetSnapshot as _, data::TweetSnapshot},
 };
 use cli_helpers::prelude::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
+
+mod wxj;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -13,6 +20,68 @@ async fn main() -> Result<(), Error> {
     opts.verbose.init_logging()?;
 
     match opts.command {
+        Command::WxjUrls { input } => {
+            let lines = BufReader::new(zstd::Decoder::new(File::open(input)?)?).lines();
+
+            for line in lines {
+                let line = line?;
+
+                let snapshot_line = SnapshotLine::parse(&line)?;
+
+                if snapshot_line.url.is_none() {
+                    let snapshot = serde_json::from_str::<Snapshot<TweetSnapshot>>(&line)?;
+
+                    match snapshot.content.canonical_url(false) {
+                        Some(url) => {
+                            println!("{},{}", snapshot_line.digest, url);
+                        }
+                        None => {
+                            println!("{},", snapshot_line.digest);
+                            log::error!("No canonical URL: {}", snapshot_line.digest);
+                        }
+                    }
+                }
+            }
+        }
+        Command::WxjEnhance {
+            data,
+            urls,
+            cdx,
+            invalid_digests,
+        } => {
+            let url_paths = wxj::read_url_paths(urls)?;
+            log::info!("{} URL path entries", url_paths.len());
+
+            let mut digest_metadata = wxj::read_cdx(cdx, &url_paths)?;
+            log::info!("{} digest metadata entries", digest_metadata.len());
+
+            wxj::read_invalid_digests(invalid_digests, &url_paths, &mut digest_metadata)?;
+            log::info!("{} digest metadata entries", digest_metadata.len());
+
+            let inferred_urls = digest_metadata
+                .values()
+                .filter(|digest_metadata| digest_metadata.url_path.is_none())
+                .count();
+
+            log::info!(
+                "{} inferred ({}%)",
+                inferred_urls,
+                (inferred_urls as f64) * 100.0 / digest_metadata.len() as f64
+            );
+
+            for (digest, uninferred) in
+                digest_metadata
+                    .iter()
+                    .filter_map(|(digest, digest_metadata)| {
+                        digest_metadata
+                            .url_path
+                            .as_ref()
+                            .map(|url_path| (digest, url_path))
+                    })
+            {
+                println!("{}: {}", digest, uninferred);
+            }
+        }
         Command::ValidatedWxjLines { input } => {
             let validation = if input.as_os_str().to_string_lossy().ends_with("zst") {
                 let lines = BufReader::new(zstd::Decoder::new(File::open(input)?)?).lines();
@@ -31,6 +100,11 @@ async fn main() -> Result<(), Error> {
                 validation.unexpected_digests.len()
             );
             println!("Out of order lines: {}", validation.out_of_order.len());
+        }
+        Command::CdxList { base } => {
+            for path in wxj::cdx_files(base).unwrap() {
+                println!("{:?}", path);
+            }
         }
         Command::CheckSurts { input } => {
             let cdx_paths = find_cdx_files(input)?;
@@ -86,6 +160,10 @@ pub enum Error {
     Json(#[from] serde_json::Error),
     #[error("SURT error")]
     Surt(#[from] archivindex_wbm::surt::Error),
+    #[error("WXJ lines error")]
+    WxjLines(#[from] archivindex_wxj::lines::Error),
+    #[error("WXJ hacking error")]
+    Wxj(#[from] wxj::Error),
 }
 
 #[derive(Debug, Parser)]
@@ -99,6 +177,20 @@ struct Opts {
 
 #[derive(Debug, Parser)]
 enum Command {
+    WxjUrls {
+        #[clap(long)]
+        input: PathBuf,
+    },
+    WxjEnhance {
+        #[clap(long)]
+        data: PathBuf,
+        #[clap(long)]
+        urls: PathBuf,
+        #[clap(long)]
+        cdx: PathBuf,
+        #[clap(long)]
+        invalid_digests: PathBuf,
+    },
     ValidatedWxjLines {
         #[clap(long)]
         input: PathBuf,
@@ -106,6 +198,10 @@ enum Command {
     CheckSurts {
         #[clap(long)]
         input: PathBuf,
+    },
+    CdxList {
+        #[clap(long)]
+        base: PathBuf,
     },
 }
 
