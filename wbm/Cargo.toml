@@ -6,6 +6,9 @@ edition = { workspace = true }
 license = { workspace = true }
 version = { workspace = true }
 
+[features]
+validation = []
+
 [dependencies]
 chrono = { workspace = true }
 data-encoding = { workspace = true }

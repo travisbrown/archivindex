@@ -18,11 +18,25 @@ pub enum Error {
     InvalidTimestamp(i64),
     #[error("Subsecond timestamp input")]
     SubsecondDateTime(DateTime<Utc>),
+    #[error("Invalid value")]
+    InvalidValue(String),
 }
 
 /// Represents a Wayback Machine URL timestamp.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Timestamp(DateTime<Utc>);
+
+impl Timestamp {
+    pub fn new_validate_round_trip(input: &str) -> Result<Option<Self>, Error> {
+        let value: Timestamp = input.parse()?;
+
+        Ok(if value.to_string() == input {
+            Some(value)
+        } else {
+            None
+        })
+    }
+}
 
 impl Display for Timestamp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -70,9 +84,21 @@ impl FromStr for Timestamp {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.len() == 14 {
-            Ok(Timestamp(
-                NaiveDateTime::parse_from_str(s, TIMESTAMP_FMT)?.and_utc(),
-            ))
+            let date_time = NaiveDateTime::parse_from_str(s, TIMESTAMP_FMT)?.and_utc();
+            let timestamp = Timestamp(date_time);
+
+            // This validation confirms that the input can be round-tripped through our representation. I've never seen
+            // an input where this fails, and the check is expensive enough that I think it deserves a feature flag
+            // (for example in one quick test it makes a 13-minute job take over 15 minutes).
+            #[cfg(feature = "validation")]
+            if timestamp.to_string() == s {
+                Ok(timestamp)
+            } else {
+                Err(Error::InvalidValue(s.to_string()))
+            }
+
+            #[cfg(not(feature = "validation"))]
+            Ok(timestamp)
         } else {
             Err(Self::Err::InvalidLength(s.to_string()))
         }
