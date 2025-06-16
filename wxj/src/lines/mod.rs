@@ -46,11 +46,11 @@ impl<'a> std::fmt::Display for SnapshotLine<'a> {
         write!(f, "{{\"{}\":\"{}\",", DIGEST_KEY, self.digest)?;
 
         if let Some(expected_digest) = self.expected_digest {
-            write!(f, "\"{}\":\"{}\",", EXPECTED_DIGEST_KEY, expected_digest)?;
+            write!(f, "\"{EXPECTED_DIGEST_KEY}\":\"{expected_digest}\",")?;
         }
 
         if let Some(closing_whitespace) = &self.closing_whitespace {
-            write!(f, "\"{}\":\"", CLOSING_WHITESPACE_KEY)?;
+            write!(f, "\"{CLOSING_WHITESPACE_KEY}\":\"")?;
 
             for whitespace in closing_whitespace {
                 match whitespace {
@@ -64,11 +64,11 @@ impl<'a> std::fmt::Display for SnapshotLine<'a> {
         }
 
         if let Some(timestamp) = self.timestamp {
-            write!(f, "\"{}\":\"{}\",", TIMESTAMP_KEY, timestamp)?;
+            write!(f, "\"{TIMESTAMP_KEY}\":\"{timestamp}\",")?;
         }
 
         if let Some(url) = &self.url {
-            write!(f, "\"{}\":\"{}\",", URL_KEY, url)?;
+            write!(f, "\"{URL_KEY}\":\"{url}\",")?;
         }
 
         write!(f, "\"content\":{}}}", self.content)
@@ -335,8 +335,7 @@ mod closing_whitespace {
                         '\r' => closing_whitespace_str.push_str("\\r"),
                         other => {
                             return Err(serde::ser::Error::custom(format!(
-                                "unexpected escaped whitespace character: {}",
-                                other
+                                "unexpected escaped whitespace character: {other}"
                             )));
                         }
                     }

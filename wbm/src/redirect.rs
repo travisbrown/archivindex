@@ -10,10 +10,7 @@ const REDIRECT_HTML_PATTERN: &str =
 /// the page usually (but not always) has the following format, where the
 /// URL is the value of the location header.
 pub fn make_redirect_html(url: &str) -> String {
-    format!(
-        "<html><body>You are being <a href=\"{}\">redirected</a>.</body></html>",
-        url
-    )
+    format!("<html><body>You are being <a href=\"{url}\">redirected</a>.</body></html>")
 }
 
 pub fn parse_redirect_html(content: &str) -> Option<&str> {
