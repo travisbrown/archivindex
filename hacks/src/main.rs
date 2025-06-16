@@ -1,6 +1,5 @@
 use archivindex_wbm::{
     cdx::{item::ItemList, mime_type::MimeType},
-    digest,
     surt::Surt,
 };
 use archivindex_wxj::lines::{
@@ -9,7 +8,7 @@ use archivindex_wxj::lines::{
 };
 use cli_helpers::prelude::*;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
 mod wxj;
@@ -48,6 +47,8 @@ async fn main() -> Result<(), Error> {
             urls,
             cdx,
             invalid_digests,
+            output,
+            compression_level,
         } => {
             let url_paths = wxj::read_url_paths(urls)?;
             log::info!("{} URL path entries", url_paths.len());
@@ -69,17 +70,51 @@ async fn main() -> Result<(), Error> {
                 (inferred_urls as f64) * 100.0 / digest_metadata.len() as f64
             );
 
-            for (digest, uninferred) in
-                digest_metadata
-                    .iter()
-                    .filter_map(|(digest, digest_metadata)| {
-                        digest_metadata
-                            .url_path
-                            .as_ref()
-                            .map(|url_path| (digest, url_path))
-                    })
-            {
-                println!("{}: {}", digest, uninferred);
+            let mut output = zstd::Encoder::new(File::create(output)?, compression_level)?;
+
+            let lines = BufReader::new(zstd::Decoder::new(File::open(data)?)?).lines();
+            for line in lines {
+                let line = line?;
+
+                let mut snapshot_line = SnapshotLine::parse(&line)?;
+                let new_line = match digest_metadata.get(&snapshot_line.digest) {
+                    Some(metadata) => {
+                        if let Some((previous, replacement)) = snapshot_line
+                            .expected_digest
+                            .zip(metadata.expected_digest)
+                            .filter(|(previous, replacement)| previous != replacement)
+                        {
+                            log::warn!("Replacing expected digest: {previous}, {replacement}");
+                        }
+
+                        snapshot_line.expected_digest = metadata.expected_digest;
+
+                        if let Some(previous) = snapshot_line
+                            .timestamp
+                            .filter(|previous| *previous != metadata.timestamp)
+                        {
+                            log::warn!("Replacing metadata: {previous}, {}", metadata.timestamp);
+                        }
+
+                        snapshot_line.timestamp = Some(metadata.timestamp);
+
+                        let new_url = metadata.url();
+
+                        if let Some((previous, replacement)) = snapshot_line
+                            .url
+                            .zip(new_url.as_ref())
+                            .filter(|(previous, replacement)| previous != *replacement)
+                        {
+                            log::warn!("Replacing URL: {previous}, {replacement}");
+                        }
+
+                        snapshot_line.url = new_url;
+                        snapshot_line.to_string()
+                    }
+                    None => line,
+                };
+
+                writeln!(output, "{new_line}")?;
             }
         }
         Command::ValidatedWxjLines { input } => {
@@ -103,7 +138,7 @@ async fn main() -> Result<(), Error> {
         }
         Command::CdxList { base } => {
             for path in wxj::cdx_files(base).unwrap() {
-                println!("{:?}", path);
+                println!("{path:?}");
             }
         }
         Command::CheckSurts { input } => {
@@ -124,9 +159,7 @@ async fn main() -> Result<(), Error> {
                                     success_count += 1;
                                 } else {
                                     log::error!(
-                                        "Invalid conversion in {:?}:\nConverted: {}\nOriginal:  {}",
-                                        path,
-                                        converted_surt,
+                                        "Invalid conversion in {path:?}:\nConverted: {converted_surt}\nOriginal:  {}",
                                         item.key
                                     );
 
@@ -136,12 +169,12 @@ async fn main() -> Result<(), Error> {
                         }
                     }
                     Err(error) => {
-                        log::error!("At {:?}: {:?}", path, error);
+                        log::error!("At {path:?}: {error:?}");
                     }
                 }
             }
 
-            log::info!("Good: {}; bad: {}", success_count, failure_count);
+            log::info!("Good: {success_count}; bad: {failure_count}");
         }
     }
 
@@ -190,6 +223,10 @@ enum Command {
         cdx: PathBuf,
         #[clap(long)]
         invalid_digests: PathBuf,
+        #[clap(long)]
+        output: PathBuf,
+        #[clap(long, default_value = "14")]
+        compression_level: i32,
     },
     ValidatedWxjLines {
         #[clap(long)]

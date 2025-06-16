@@ -50,12 +50,12 @@ impl Metadata {
         self
     }
 
-    fn url(&self) -> Option<Cow<str>> {
+    pub fn url(&self) -> Option<Cow<'_, str>> {
         self.url_path.as_ref().map(|url_path| {
             if url_path.starts_with("https:") {
                 url_path.into()
             } else {
-                format!("https://twitter.com{}", url_path).into()
+                format!("https://twitter.com{url_path}").into()
             }
         })
     }
@@ -138,7 +138,7 @@ pub fn read_cdx<P: AsRef<Path>>(
                 match entry {
                     Entry::Occupied(entry) => {
                         if entry.get() != &digest_metadata {
-                            log::error!("Multiple entries for {}: {:?}", digest, digest_metadata);
+                            log::error!("Multiple entries for {digest}: {digest_metadata:?}");
                         }
                     }
                     Entry::Vacant(entry) => {
