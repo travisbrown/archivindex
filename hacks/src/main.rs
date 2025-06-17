@@ -4,7 +4,7 @@ use archivindex_wbm::{
 };
 use archivindex_wxj::lines::{
     Snapshot, SnapshotLine,
-    tweet::{TweetSnapshot as _, data::TweetSnapshot},
+    tweet::{TweetSnapshot as _, data, flat},
 };
 use cli_helpers::prelude::*;
 use std::fs::File;
@@ -19,7 +19,7 @@ async fn main() -> Result<(), Error> {
     opts.verbose.init_logging()?;
 
     match opts.command {
-        Command::WxjUrls { input } => {
+        Command::WxjUrls { input, flat } => {
             let lines = BufReader::new(zstd::Decoder::new(File::open(input)?)?).lines();
 
             for line in lines {
@@ -28,9 +28,17 @@ async fn main() -> Result<(), Error> {
                 let snapshot_line = SnapshotLine::parse(&line)?;
 
                 if snapshot_line.url.is_none() {
-                    let snapshot = serde_json::from_str::<Snapshot<TweetSnapshot>>(&line)?;
+                    let url = if flat {
+                        serde_json::from_str::<Snapshot<flat::TweetSnapshot>>(&line)?
+                            .content
+                            .canonical_url(false)
+                    } else {
+                        serde_json::from_str::<Snapshot<data::TweetSnapshot>>(&line)?
+                            .content
+                            .canonical_url(false)
+                    };
 
-                    match snapshot.content.canonical_url(false) {
+                    match url {
                         Some(url) => {
                             println!("{},{}", snapshot_line.digest, url);
                         }
@@ -215,6 +223,8 @@ enum Command {
     WxjUrls {
         #[clap(long)]
         input: PathBuf,
+        #[clap(long)]
+        flat: bool,
     },
     WxjEnhance {
         #[clap(long)]
