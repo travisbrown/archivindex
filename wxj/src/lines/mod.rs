@@ -2,6 +2,7 @@ use archivindex_wbm::{digest::Sha1Digest, timestamp::Timestamp};
 use sha1::{Digest, Sha1};
 use std::borrow::Cow;
 
+pub mod io;
 pub mod tweet;
 
 const DEFAULT_CLOSING_WHITESPACE: [u8; 3] = [b'\r', b'\r', b'\n'];
@@ -92,6 +93,51 @@ const CONTENT_KEY: &str = "content";
 const CONTENT_KEY_LEN: usize = CONTENT_KEY.len();
 
 impl<'a> SnapshotLine<'a> {
+    pub fn new(digest: Sha1Digest, content: &'a str) -> Self {
+        let bytes = content.as_bytes();
+
+        let closing_whitespace = if bytes[bytes.len() - 3..] == DEFAULT_CLOSING_WHITESPACE
+            && bytes[bytes.len() - 4] != b'\r'
+            && bytes[bytes.len() - 4] != b'\n'
+        {
+            None
+        } else {
+            Some(
+                content
+                    .chars()
+                    .rev()
+                    .take_while(|ch| *ch == '\r' || *ch == '\n')
+                    .collect::<Vec<_>>(),
+            )
+        };
+
+        let content = &content[0..content.len()
+            - closing_whitespace
+                .as_ref()
+                .map(|closing_whitespace| closing_whitespace.len())
+                .unwrap_or(0)];
+
+        Self {
+            digest,
+            expected_digest: None,
+            closing_whitespace,
+            timestamp: None,
+            url: None,
+            content: content.into(),
+        }
+    }
+
+    pub fn into_owned(self) -> SnapshotLine<'static> {
+        SnapshotLine {
+            digest: self.digest,
+            expected_digest: self.expected_digest,
+            closing_whitespace: self.closing_whitespace,
+            timestamp: self.timestamp,
+            url: self.url.map(|url| url.into_owned().into()),
+            content: self.content.into_owned().into(),
+        }
+    }
+
     pub fn validate(&self, hasher: &mut sha1::Sha1) -> Result<(), Sha1Digest> {
         hasher.update(self.content.as_bytes());
 

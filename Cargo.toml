@@ -11,13 +11,17 @@ version = "0.1.0"
 
 [workspace.dependencies]
 chrono = { version = "0.4", features = ["serde"] }
+csv = "1"
 data-encoding = "2"
+flate2 = "1"
 http = "1"
+log = "0.4"
 quickcheck = "1"
 regex = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 sha1 = "0.10"
 thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 url = "2"
 zstd = "0.13"
