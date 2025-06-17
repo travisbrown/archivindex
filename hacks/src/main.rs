@@ -116,6 +116,8 @@ async fn main() -> Result<(), Error> {
 
                 writeln!(output, "{new_line}")?;
             }
+
+            output.do_finish()?;
         }
         Command::ValidatedWxjLines { input } => {
             let validation = if input.as_os_str().to_string_lossy().ends_with("zst") {
