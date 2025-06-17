@@ -5,6 +5,8 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
+mod cdx;
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let opts: Opts = Opts::parse();
@@ -68,6 +70,48 @@ async fn main() -> Result<(), Error> {
 
             log::info!("{} incomplete", count);
         }
+        Command::Merge {
+            input,
+            snapshots,
+            output,
+            compression,
+        } => {
+            let importers = snapshots
+                .into_iter()
+                .map(archivindex_wbm::cas::import::Importer::new)
+                .collect::<Vec<_>>();
+
+            let mut files = importers
+                .into_iter()
+                .flat_map(|importer| {
+                    importer.filter_map(|file| match file {
+                        Ok(archivindex_wbm::cas::import::File::Valid {
+                            digest,
+                            path,
+                            compression_type,
+                        }) => Some((digest, path, compression_type)),
+                        Ok(archivindex_wbm::cas::import::File::Skipped { path }) => {
+                            log::info!("Skipped: {}", path.as_os_str().to_string_lossy());
+                            None
+                        }
+                        Err(archivindex_wbm::cas::import::Error::InvalidDigest {
+                            expected,
+                            found,
+                        }) => {
+                            log::warn!("Invalid digest: {} instead of {}", found, expected);
+                            None
+                        }
+                        Err(other) => {
+                            panic!("{:?}", other);
+                        }
+                    })
+                })
+                .collect::<Vec<_>>();
+
+            log::info!("Prepared {} files", files.len());
+
+            files.sort_by_key(|(digest, _, _)| *digest);
+        }
     }
 
     Ok(())
@@ -105,5 +149,15 @@ enum Command {
     Incomplete {
         #[clap(long)]
         input: Vec<PathBuf>,
+    },
+    Merge {
+        #[clap(long)]
+        input: PathBuf,
+        #[clap(long)]
+        snapshots: Vec<PathBuf>,
+        #[clap(long)]
+        output: PathBuf,
+        #[clap(long)]
+        compression: Option<u16>,
     },
 }
