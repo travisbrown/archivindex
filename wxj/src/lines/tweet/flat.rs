@@ -2,7 +2,6 @@ use birdsite::model::attributes::integer_str;
 use std::borrow::Cow;
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-#[serde(deny_unknown_fields)]
 pub struct TweetSnapshot<'a> {
     #[serde(with = "integer_str")]
     pub id_str: u64,
