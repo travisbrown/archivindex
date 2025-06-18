@@ -115,7 +115,7 @@ impl<'a> SnapshotLine<'a> {
             - closing_whitespace
                 .as_ref()
                 .map(|closing_whitespace| closing_whitespace.len())
-                .unwrap_or(0)];
+                .unwrap_or(DEFAULT_CLOSING_WHITESPACE.len())];
 
         Self {
             digest,
@@ -263,9 +263,10 @@ impl<'a> SnapshotLine<'a> {
                 if failed {
                     Err(Error::InvalidLine)
                 } else {
+                    let url = line[index..index + i].into();
                     index += i + 3;
 
-                    Ok(Some(line[index..index + i].into()))
+                    Ok(Some(url))
                 }
             } else {
                 Ok(None)
@@ -399,6 +400,19 @@ mod tests {
     use std::io::BufRead;
 
     use super::*;
+
+    #[test]
+    fn parse_inferred_url() -> Result<(), Box<dyn std::error::Error>> {
+        let line = include_str!("../../../examples/wxj/inferred-url-01.json").trim();
+
+        let parsed = SnapshotLine::parse(line)?;
+
+        assert_eq!(line, parsed.to_string());
+
+        assert_eq!(parsed.validate(&mut Default::default()), Ok(()));
+
+        Ok(())
+    }
 
     #[test]
     fn parse_examples() -> Result<(), Box<dyn std::error::Error>> {
