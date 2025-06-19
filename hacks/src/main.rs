@@ -19,7 +19,11 @@ async fn main() -> Result<(), Error> {
     opts.verbose.init_logging()?;
 
     match opts.command {
-        Command::WxjUrls { input, flat } => {
+        Command::WxjUrls {
+            input,
+            flat,
+            include_timestamped,
+        } => {
             let lines = BufReader::new(zstd::Decoder::new(File::open(input)?)?).lines();
 
             for line in lines {
@@ -27,7 +31,9 @@ async fn main() -> Result<(), Error> {
 
                 let snapshot_line = SnapshotLine::parse(&line)?;
 
-                if snapshot_line.url.is_none() {
+                if snapshot_line.url.is_none()
+                    && (include_timestamped || snapshot_line.timestamp.is_none())
+                {
                     let url = if flat {
                         serde_json::from_str::<Snapshot<flat::TweetSnapshot>>(&line)?
                             .content
@@ -225,6 +231,8 @@ enum Command {
         input: PathBuf,
         #[clap(long)]
         flat: bool,
+        #[clap(long)]
+        include_timestamped: bool,
     },
     WxjEnhance {
         #[clap(long)]
