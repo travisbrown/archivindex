@@ -1,5 +1,6 @@
 use archivindex_wbm::digest::Sha1Digest;
-use archivindex_wxj::lines::SnapshotLine;
+use archivindex_wxj::lines::{Snapshot, SnapshotLine};
+use birdsite::model::wxj::{TweetSnapshot, data, flat};
 use cli_helpers::prelude::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -198,6 +199,30 @@ async fn main() -> Result<(), Error> {
             flat_output.finish()?;
             data_output.finish()?;
         }
+        Command::TweetIds { input, flat } => {
+            let reader = BufReader::new(zstd::Decoder::new(File::open(&input)?)?);
+
+            for line in reader.lines() {
+                let line = line?;
+
+                let snapshot = if flat {
+                    serde_json::from_str::<Snapshot<flat::TweetSnapshot>>(&line)?
+                        .map_content(TweetSnapshot::Flat)
+                } else {
+                    serde_json::from_str::<Snapshot<data::TweetSnapshot>>(&line)?
+                        .map_content(TweetSnapshot::Data)
+                };
+
+                let metadata =
+                    birdsite::model::metadata::tweet::TweetMetadata::from_tweet_snapshot(
+                        &snapshot.content,
+                    )?;
+
+                for tweet in metadata {
+                    println!("{},{}", tweet.user.id, tweet.id);
+                }
+            }
+        }
     }
 
     Ok(())
@@ -219,6 +244,8 @@ pub enum Error {
     WbmCas(#[from] archivindex_wbm::cas::import::Error),
     #[error("WXJ line parsing error")]
     WxjLine(#[from] archivindex_wxj::lines::Error),
+    #[error("WXJ data format error")]
+    BirdsiteWxjDataFormat(#[from] birdsite::model::wxj::data::FormatError),
 }
 
 #[derive(Debug, Parser)]
@@ -249,5 +276,11 @@ enum Command {
         output: PathBuf,
         #[clap(long, default_value = "14")]
         compression: u16,
+    },
+    TweetIds {
+        #[clap(long)]
+        input: PathBuf,
+        #[clap(long)]
+        flat: bool,
     },
 }

@@ -9,6 +9,7 @@ version = "0.1.0"
 [dependencies]
 archivindex-wbm = { path = "../wbm/" }
 archivindex-wxj = { path = "../wxj/" }
+birdsite = { workspace = true }
 chrono = { workspace = true }
 cli-helpers = "0.1"
 csv = { workspace = true }

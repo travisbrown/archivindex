@@ -3,7 +3,6 @@ use sha1::{Digest, Sha1};
 use std::borrow::Cow;
 
 pub mod io;
-pub mod tweet;
 
 const DEFAULT_CLOSING_WHITESPACE: [u8; 3] = [b'\r', b'\r', b'\n'];
 
@@ -30,6 +29,19 @@ pub struct Snapshot<'a, S> {
     pub timestamp: Option<Timestamp>,
     pub url: Option<Cow<'a, str>>,
     pub content: S,
+}
+
+impl<'a, S> Snapshot<'a, S> {
+    pub fn map_content<T, F: FnOnce(S) -> T>(self, f: F) -> Snapshot<'a, T> {
+        Snapshot {
+            digest: self.digest,
+            expected_digest: self.expected_digest,
+            closing_whitespace: self.closing_whitespace,
+            timestamp: self.timestamp,
+            url: self.url,
+            content: f(self.content),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -449,7 +461,7 @@ mod tests {
 
         for line in lines {
             let _snapshot =
-                serde_json::from_str::<Snapshot<crate::lines::tweet::data::TweetSnapshot>>(line)?;
+                serde_json::from_str::<Snapshot<birdsite::model::wxj::data::TweetSnapshot>>(line)?;
         }
 
         Ok(())
@@ -462,7 +474,7 @@ mod tests {
         for line in lines {
             let snapshot_line = SnapshotLine::parse(line)?;
             let snapshot =
-                serde_json::from_str::<Snapshot<crate::lines::tweet::data::TweetSnapshot>>(line)?;
+                serde_json::from_str::<Snapshot<birdsite::model::wxj::data::TweetSnapshot>>(line)?;
 
             assert_eq!(snapshot_line.digest, snapshot.digest);
             assert_eq!(snapshot_line.expected_digest, snapshot.expected_digest);
