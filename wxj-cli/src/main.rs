@@ -6,6 +6,7 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
 mod cdx;
+mod snapshot;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -76,41 +77,126 @@ async fn main() -> Result<(), Error> {
             output,
             compression,
         } => {
-            let importers = snapshots
-                .into_iter()
-                .map(archivindex_wbm::cas::import::Importer::new)
-                .collect::<Vec<_>>();
+            const FLAT_FILE_NAME: &str = "flat.ndjson.zst";
+            const DATA_FILE_NAME: &str = "data.ndjson.zst";
 
-            let mut files = importers
-                .into_iter()
-                .flat_map(|importer| {
-                    importer.filter_map(|file| match file {
-                        Ok(archivindex_wbm::cas::import::File::Valid {
-                            digest,
-                            path,
-                            compression_type,
-                        }) => Some((digest, path, compression_type)),
-                        Ok(archivindex_wbm::cas::import::File::Skipped { path }) => {
-                            log::info!("Skipped: {}", path.as_os_str().to_string_lossy());
-                            None
-                        }
-                        Err(archivindex_wbm::cas::import::Error::InvalidDigest {
-                            expected,
-                            found,
-                        }) => {
-                            log::warn!("Invalid digest: {} instead of {}", found, expected);
-                            None
-                        }
-                        Err(other) => {
-                            panic!("{:?}", other);
-                        }
-                    })
-                })
-                .collect::<Vec<_>>();
+            let snapshot::SnapshotImport {
+                paths,
+                skipped,
+                invalid_digests,
+            } = snapshot::snapshot_import(&snapshots)?;
 
-            log::info!("Prepared {} files", files.len());
+            for path in skipped {
+                log::info!("Skipped: {}", path.as_os_str().to_string_lossy());
+            }
 
-            files.sort_by_key(|(digest, _, _)| *digest);
+            for (expected, found) in invalid_digests {
+                log::warn!("Invalid digest: {} instead of {}", found, expected);
+            }
+
+            log::info!("Prepared {} files", paths.len());
+
+            let mut flat_input =
+                archivindex_wxj::lines::io::SnapshotReader::open(input.join(FLAT_FILE_NAME))?
+                    .peekable();
+            let mut data_input =
+                archivindex_wxj::lines::io::SnapshotReader::open(input.join(DATA_FILE_NAME))?
+                    .peekable();
+
+            std::fs::create_dir_all(&output)?;
+
+            let mut flat_output = archivindex_wxj::lines::io::SnapshotWriter::create(
+                output.join(FLAT_FILE_NAME),
+                compression,
+            )?;
+
+            let mut data_output = archivindex_wxj::lines::io::SnapshotWriter::create(
+                output.join(DATA_FILE_NAME),
+                compression,
+            )?;
+
+            for (digest, path, _) in paths {
+                let mut flat_next = flat_input
+                    .peek()
+                    .and_then(|result| result.as_ref().ok())
+                    .map(|snapshot| snapshot.digest);
+
+                let mut data_next = data_input
+                    .peek()
+                    .and_then(|result| result.as_ref().ok())
+                    .map(|snapshot| snapshot.digest);
+
+                while flat_next
+                    .map(|flat_digest| flat_digest < digest)
+                    .unwrap_or(false)
+                {
+                    // We can unwrap safely because of the peek.
+                    let snapshot = flat_input.next().unwrap()?;
+                    flat_output.write_snapshot(&snapshot)?;
+                    flat_next = flat_input
+                        .peek()
+                        .and_then(|result| result.as_ref().ok())
+                        .map(|snapshot| snapshot.digest);
+                }
+
+                while data_next
+                    .map(|data_digest| data_digest < digest)
+                    .unwrap_or(false)
+                {
+                    // We can unwrap safely because of the peek.
+                    let snapshot = data_input.next().unwrap()?;
+                    data_output.write_snapshot(&snapshot)?;
+                    data_next = data_input
+                        .peek()
+                        .and_then(|result| result.as_ref().ok())
+                        .map(|snapshot| snapshot.digest);
+                }
+
+                if flat_next == Some(digest) {
+                    // We can unwrap safely because of the peek.
+                    let snapshot = flat_input.next().unwrap()?;
+                    flat_output.write_snapshot(&snapshot)?;
+                } else if data_next == Some(digest) {
+                    // We can unwrap safely because of the peek.
+                    let snapshot = data_input.next().unwrap()?;
+                    data_output.write_snapshot(&snapshot)?;
+                } else {
+                    match std::fs::read_to_string(&path).map_err(|error| Error::FileIo(path, error))
+                    {
+                        Ok(content) => {
+                            let bytes = content.as_bytes();
+
+                            let trimmed = content.trim();
+
+                            if !trimmed.contains(['\n', '\r']) {
+                                if content.starts_with("{\"created_at\":") {
+                                    flat_output.write(digest, bytes)?;
+                                } else if content.starts_with("{\"data\":") {
+                                    data_output.write(digest, bytes)?;
+                                } else {
+                                    log::info!("Skipped: {}", digest);
+                                }
+                            } else {
+                                log::info!("Skipped because not single line: {}", digest);
+                            }
+                        }
+                        Err(error) => {
+                            log::info!("File I/O error: {:?}", error);
+                        }
+                    }
+                }
+            }
+
+            for snapshot_line in flat_input {
+                flat_output.write_snapshot(&snapshot_line?)?;
+            }
+
+            for snapshot_line in data_input {
+                data_output.write_snapshot(&snapshot_line?)?;
+            }
+
+            flat_output.finish()?;
+            data_output.finish()?;
         }
     }
 
@@ -121,12 +207,16 @@ async fn main() -> Result<(), Error> {
 pub enum Error {
     #[error("I/O error")]
     Io(#[from] std::io::Error),
+    #[error("File I/O error")]
+    FileIo(PathBuf, std::io::Error),
     #[error("CLI argument reading error")]
     Args(#[from] cli_helpers::Error),
     #[error("CSV error")]
     Csv(#[from] csv::Error),
     #[error("JSON error")]
     Json(#[from] serde_json::Error),
+    #[error("WBM snapshot storage import error")]
+    WbmCas(#[from] archivindex_wbm::cas::import::Error),
     #[error("WXJ line parsing error")]
     WxjLine(#[from] archivindex_wxj::lines::Error),
 }
@@ -157,7 +247,7 @@ enum Command {
         snapshots: Vec<PathBuf>,
         #[clap(long)]
         output: PathBuf,
-        #[clap(long)]
-        compression: Option<u16>,
+        #[clap(long, default_value = "14")]
+        compression: u16,
     },
 }
