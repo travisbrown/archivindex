@@ -180,8 +180,6 @@ pub fn read_invalid_digests<P: AsRef<Path>>(
             )
             .with_expected_digest(invalid_digest.expected_digest);
 
-            //log::info!("HIT: {:?}", digest_metadata);
-
             let entry = digest_metadata_map.entry(invalid_digest.digest);
 
             if let Entry::Vacant(entry) = entry {
@@ -196,4 +194,30 @@ pub fn read_invalid_digests<P: AsRef<Path>>(
     }
 
     Ok(())
+}
+
+pub fn data_canonical_url(
+    snapshot: &birdsite::model::wxj::data::TweetSnapshot,
+    use_x: bool,
+) -> Option<String> {
+    snapshot.lookup_user(snapshot.data.author_id).map(|user| {
+        format!(
+            "https://{}.com/{}/status/{}",
+            if use_x { "x" } else { "twitter" },
+            user.username,
+            snapshot.data.id
+        )
+    })
+}
+
+pub fn flat_canonical_url(
+    snapshot: &birdsite::model::wxj::flat::TweetSnapshot,
+    use_x: bool,
+) -> String {
+    format!(
+        "https://{}.com/{}/status/{}",
+        if use_x { "x" } else { "twitter" },
+        snapshot.user.screen_name,
+        snapshot.id
+    )
 }

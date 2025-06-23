@@ -2,10 +2,8 @@ use archivindex_wbm::{
     cdx::{item::ItemList, mime_type::MimeType},
     surt::Surt,
 };
-use archivindex_wxj::lines::{
-    Snapshot, SnapshotLine,
-    tweet::{TweetSnapshot as _, data, flat},
-};
+use archivindex_wxj::lines::{Snapshot, SnapshotLine};
+use birdsite::model::wxj::{data, flat};
 use cli_helpers::prelude::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
@@ -35,13 +33,15 @@ async fn main() -> Result<(), Error> {
                     && (include_timestamped || snapshot_line.timestamp.is_none())
                 {
                     let url = if flat {
-                        serde_json::from_str::<Snapshot<flat::TweetSnapshot>>(&line)?
-                            .content
-                            .canonical_url(false)
+                        Some(wxj::flat_canonical_url(
+                            &serde_json::from_str::<Snapshot<flat::TweetSnapshot>>(&line)?.content,
+                            false,
+                        ))
                     } else {
-                        serde_json::from_str::<Snapshot<data::TweetSnapshot>>(&line)?
-                            .content
-                            .canonical_url(false)
+                        wxj::data_canonical_url(
+                            &serde_json::from_str::<Snapshot<data::TweetSnapshot>>(&line)?.content,
+                            false,
+                        )
                     };
 
                     match url {
