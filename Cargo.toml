@@ -1,0 +1,86 @@
+[workspace]
+members = ["crates/*"]
+resolver = "3"
+
+[workspace.package]
+authors = ["Travis Brown <travisrobertbrown@gmail.com>"]
+repository = "https://github.com/travisbrown/archivindex"
+edition = "2024"
+rust-version = "1.98"
+license = "MIT OR Apache-2.0"
+version = "0.1.0"
+
+[workspace.dependencies]
+archivindex-cli-support = { path = "crates/archivindex-cli-support" }
+archivindex-http = { version = "0.1.0", path = "crates/archivindex-http" }
+archivindex-http-client = { path = "crates/archivindex-http-client" }
+archivindex-serde = { version = "0.1.0", path = "crates/archivindex-serde" }
+archivindex-test-support = { path = "crates/archivindex-test-support" }
+bounded-static = "0.8"
+cargo_metadata = "0.23"
+chrono = "0.4"
+clap = { version = "4", features = ["derive"] }
+criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
+ctrlc = { version = "3", features = ["termination"] }
+data-encoding = "2"
+fluent-uri = "0.4"
+futures = "0.3"
+h2 = "0.4.19"
+http = "1"
+http-body-util = "0.1"
+hyper = { version = "1.11.1", default-features = false, features = ["http1"] }
+indicatif = "0.18"
+log = "0.4"
+proptest = { version = "1.11", features = ["attr-macro"] }
+rcgen = "0.14"
+reqwest = { version = "0.13.5", default-features = false, features = [
+  "rustls-no-provider",
+  "socks",
+] }
+rustls = "0.23.45"
+serde = { version = "1" }
+serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = "0.11.0"
+simplelog = "0.12"
+tempfile = "3"
+thiserror = "2"
+tokio = "1"
+tokio-rustls = "0.26.5"
+toml = "1"
+toml_edit = "0.25"
+url = "2"
+webpki-roots = "1"
+wiremock = "0.6.5"
+wreq = { version = "=0.16.1", default-features = false }
+wreq-proto = "=0.2.6"
+wreq-util = { version = "=0.2.0", default-features = false }
+
+[workspace.lints.rust]
+missing_docs = "deny"
+rust_2018_idioms = { level = "warn", priority = -1 }
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+
+[patch.crates-io]
+# Apply the observer fork to both direct and transitive uses of wreq. Consuming workspaces
+# enabling wreq must repeat these patches; see crates/archivindex-http-client/README.md.
+# The TLS crates share one revision.
+wreq = { git = "https://github.com/travisbrown/wreq", rev = "108701e00f33b40132e78d28abce8b4f6e3a6b19" }
+btls = { git = "https://github.com/0x676e67/btls", rev = "9d859deefab0183e2fccf91204c818c8d1805b27" }
+btls-sys = { git = "https://github.com/0x676e67/btls", rev = "9d859deefab0183e2fccf91204c818c8d1805b27" }
+tokio-btls = { git = "https://github.com/0x676e67/btls", rev = "9d859deefab0183e2fccf91204c818c8d1805b27" }
+
+[[workspace.metadata.archivindex-build.exemptions]]
+package = "archivindex-http-client"
+rule = "package.license"
+reason = "Preserve the HTTP crate's GPL-3.0-only license."
+
+[[workspace.metadata.archivindex-build.exemptions]]
+package = "archivindex-http-client-challenge"
+rule = "package.license"
+reason = "Preserve the HTTP crate's GPL-3.0-only license."
