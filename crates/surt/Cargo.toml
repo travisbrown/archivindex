@@ -1,0 +1,40 @@
+[package]
+name = "archivindex-surt"
+description = "Sort-friendly URI Reordering Transform (SURT) keys and URL canonicalization"
+authors.workspace = true
+repository.workspace = true
+documentation = "https://docs.rs/crate/archivindex-surt/"
+keywords = ["surt", "cdx", "warc", "web", "archive"]
+edition.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+license.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[features]
+default = ["bounded-static", "fluent-uri", "serde"]
+serde = ["dep:serde"]
+bounded-static = ["dep:bounded-static"]
+fluent-uri = ["dep:fluent-uri"]
+url = ["dep:url"]
+
+[dependencies]
+bounded-static = { workspace = true, optional = true }
+fluent-uri = { workspace = true, optional = true }
+# The Serde implementations are handwritten, so this dependency does not enable `derive`.
+serde = { version = "1", optional = true }
+thiserror.workspace = true
+url = { workspace = true, optional = true }
+
+[dev-dependencies]
+archivindex-test-support.workspace = true
+proptest.workspace = true
+serde_json.workspace = true
+test-strategy.workspace = true

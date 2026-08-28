@@ -1,0 +1,19 @@
+[package]
+name = "archivindex-test-support"
+description = "Test helpers shared by Archivindex crates"
+authors.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+proptest.workspace = true
+
+[dev-dependencies]
+test-strategy.workspace = true
