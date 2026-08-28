@@ -1,0 +1,19 @@
+[package]
+name = "archivindex-test-support"
+description = "Test helpers shared by Archivindex projects"
+authors.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+futures.workspace = true
+proptest.workspace = true
+url.workspace = true
+wiremock.workspace = true
