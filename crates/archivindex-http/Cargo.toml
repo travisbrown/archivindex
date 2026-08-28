@@ -1,0 +1,22 @@
+[package]
+name = "archivindex-http"
+description = "HTTP/1 message parsing and body extraction"
+authors.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+version.workspace = true
+readme = "README.md"
+keywords = ["http", "parsing", "archive"]
+categories = ["parser-implementations"]
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dependencies]
+thiserror.workspace = true

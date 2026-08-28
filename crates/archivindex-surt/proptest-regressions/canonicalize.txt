@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 72f4bbdc751268f5bc0fc07b786567061059049f284d4144b6e25c35a076512e # shrinks to WaybackIsIdempotentArgs = WaybackIsIdempotentArgs { url: "http://a%3fa" }
+cc f861f391676b2ad177a217f133b97d0376a9973e197e6d3974af7ffef48281c4 # shrinks to WaybackKeysAreCanonicalArgs = WaybackKeysAreCanonicalArgs { url: "http://a%3Aa.a" }
