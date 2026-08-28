@@ -1,0 +1,30 @@
+[package]
+name = "archivindex-lines"
+description = "Line-oriented reading with bounded lines and source diagnostics"
+authors.workspace = true
+repository.workspace = true
+keywords = ["lines", "jsonl", "ndjson", "cdxj", "diagnostics"]
+categories = ["encoding"]
+edition.workspace = true
+rust-version.workspace = true
+readme = "README.md"
+license.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dependencies]
+thiserror.workspace = true
+
+[dev-dependencies]
+archivindex-test-support.workspace = true
+proptest.workspace = true
+
+[[bench]]
+name = "diagnostics"
+harness = false
