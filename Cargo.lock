@@ -115,6 +115,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "archivindex-lines"
+version = "0.1.0"
+dependencies = [
+ "archivindex-test-support",
+ "proptest",
+ "test-strategy",
+ "thiserror",
+]
+
+[[package]]
 name = "archivindex-serde"
 version = "0.1.0"
 dependencies = [
