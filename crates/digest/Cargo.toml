@@ -1,0 +1,28 @@
+[package]
+name = "archivindex-digest"
+description = "Text encodings shared by fixed-size digest newtypes"
+authors.workspace = true
+repository.workspace = true
+documentation = "https://docs.rs/crate/archivindex-digest/"
+keywords = ["digest", "base32", "hex", "web", "archive"]
+categories = ["encoding"]
+edition.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+license.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dependencies]
+data-encoding.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+test-strategy.workspace = true
