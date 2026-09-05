@@ -1,0 +1,24 @@
+[package]
+name = "archivindex-publication"
+description = "Atomic file publication with explicit overwrite and durability guarantees"
+authors.workspace = true
+repository.workspace = true
+documentation = "https://docs.rs/crate/archivindex-publication/"
+keywords = ["atomic", "file", "filesystem"]
+categories = ["filesystem"]
+edition.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+license.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dependencies]
+tempfile.workspace = true
+thiserror.workspace = true
