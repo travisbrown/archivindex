@@ -9,16 +9,29 @@ Core data models and support crates for Archivindex web archiving and indexing t
 
 ## Crates
 
-| Crate                                              | Description                                                                                         |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| [`archivindex-surt`](crates/surt/)                 | [SURT][surt] keys and URL canonicalization for web archives                                         |
-| [`archivindex-cdx`](crates/cdx/)                   | Data models for [classic CDX][cdx], [CDXJ][cdxj], and the [Wayback Machine's CDX JSON][wayback-cdx] |
-| [`archivindex-serde`](crates/serde/)               | String deserialization, borrowing, and `FromStr` helpers                                           |
-| [`archivindex-cli-support`](crates/cli-support/)   | Command-line options, configuration, logging, progress, and exit statuses                           |
-| [`archivindex-test-support`](crates/test-support/) | Test fixtures, property-testing strategies, and scripted loopback HTTP servers                      |
+| Crate                                                        | Description                                                                                         |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| [`archivindex-surt`](crates/surt/)                           | [SURT][surt] keys and URL canonicalization for web archives                                         |
+| [`archivindex-cdx`](crates/cdx/)                             | Data models for [classic CDX][cdx], [CDXJ][cdxj], and the [Wayback Machine's CDX JSON][wayback-cdx] |
+| [`archivindex-digest`](crates/digest/)                       | Fixed-size digest text encoding and decoding                                                        |
+| [`archivindex-lines`](crates/lines/)                         | Bounded line-oriented reading with source diagnostics                                               |
+| [`archivindex-publication`](crates/publication/)             | File publication with explicit overwrite policies and durability checks                             |
+| [`archivindex-serde`](crates/serde/)                         | String deserialization, borrowing, and `FromStr` helpers                                            |
+| [`archivindex-cli-support`](crates/cli-support/)             | Command-line options, configuration, logging, progress, and exit statuses                           |
+| [`archivindex-test-support`](crates/test-support/)           | Test fixtures, property-testing strategies, and scripted loopback HTTP servers                      |
+| [`cargo-archivindex-build`](crates/cargo-archivindex-build/) | Workspace policy checks and configuration synchronization                                           |
 
-WARC reading and writing live in the [`archivindex-warc`][archivindex-warc] repository, and WACZ
-packaging lives in [`archivindex-wacz`][archivindex-wacz].
+## Ecosystem
+
+| Repository                                       | Responsibility                                                               |
+| ------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `archivindex` (this repository)                  | Shared archive data models and development support                           |
+| [`archivindex-warc`][archivindex-warc]           | WARC reading, writing, capture, transformations, and revisit indexing        |
+| [`archivindex-wacz`][archivindex-wacz]           | WACZ collections and WARC-to-WACZ packaging                                  |
+| [`archivindex-wbm`][archivindex-wbm]             | Wayback Machine queries, downloads, content storage, and snapshot processing |
+| [`archivindex-wordpress`][archivindex-wordpress] | WordPress API models and archive capture                                     |
+
+Each repository is a separate Cargo workspace.
 
 ## Development
 
@@ -38,6 +51,8 @@ Every crate here is licensed under either the [MIT License][mit] or the
 [apache-2.0]: https://www.apache.org/licenses/LICENSE-2.0
 [archivindex-wacz]: https://github.com/travisbrown/archivindex-wacz
 [archivindex-warc]: https://github.com/travisbrown/archivindex-warc
+[archivindex-wbm]: https://github.com/travisbrown/archivindex-wbm
+[archivindex-wordpress]: https://github.com/travisbrown/archivindex-wordpress
 [build]: https://github.com/travisbrown/archivindex/actions/workflows/ci.yml
 [build-badge]: https://github.com/travisbrown/archivindex/actions/workflows/ci.yml/badge.svg
 [cdx]: https://iipc.github.io/warc-specifications/specifications/cdx-format/cdx-2015/
