@@ -168,6 +168,10 @@ mod tests {
     use super::*;
     use crate::strategies;
 
+    const CLASSIC_MARKERS: &[&str] = &[
+        "N", "A", "b", "a", "m", "s", "k", "R", "r", "M", "S", "V", "g", "c", "e", "n", "z",
+    ];
+
     fn canonical_fields() -> Vec<(&'static str, Field<'static>)> {
         vec![
             ("urlkey", Field::UrlKey),
@@ -258,11 +262,7 @@ mod tests {
     }
 
     #[test_strategy::proptest]
-    fn classic_markers_are_canonical(
-        #[strategy(select(vec!["N", "A", "b", "a", "m", "s", "k", "R", "r", "M", "S", "V", "g",
-                               "c", "e", "n", "z"]))]
-        marker: &'static str,
-    ) {
+    fn classic_markers_are_canonical(#[strategy(select(CLASSIC_MARKERS))] marker: &'static str) {
         let field = Field::classic(marker);
 
         prop_assert_eq!(&Field::named(field.as_name()), &field);
