@@ -14,6 +14,3 @@ workspace = true
 
 [dependencies]
 proptest.workspace = true
-
-[dev-dependencies]
-test-strategy.workspace = true

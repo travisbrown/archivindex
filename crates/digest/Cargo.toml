@@ -25,4 +25,3 @@ thiserror.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
-test-strategy.workspace = true

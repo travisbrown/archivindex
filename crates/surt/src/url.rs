@@ -637,9 +637,9 @@ mod tests {
         );
     }
 
-    #[test_strategy::proptest]
+    #[proptest::property_test]
     fn parsing_preserves_components(
-        #[strategy(strategies::url_parts())] parts: strategies::UrlParts,
+        #[strategy = strategies::url_parts()] parts: strategies::UrlParts,
     ) {
         let text = parts.to_string();
         let url = Url::parse(&text).unwrap();
@@ -655,8 +655,8 @@ mod tests {
         prop_assert_eq!(url.clone().into_owned(), url);
     }
 
-    #[test_strategy::proptest]
-    fn surt_forms_agree(#[strategy(strategies::url_parts())] parts: strategies::UrlParts) {
+    #[proptest::property_test]
+    fn surt_forms_agree(#[strategy = strategies::url_parts()] parts: strategies::UrlParts) {
         let text = parts.to_string();
         let url = Url::parse(&text).unwrap();
         let key = url.surt();

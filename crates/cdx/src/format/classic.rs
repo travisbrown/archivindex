@@ -361,9 +361,14 @@ mod tests {
         Ok(())
     }
 
-    #[test_strategy::proptest]
+    #[proptest::property_test]
     fn header_and_record_round_trip(
-        #[strategy(strategies::legend_and_values())] legend: (char, bool, Vec<String>, Vec<String>),
+        #[strategy = strategies::legend_and_values()] legend: (
+            char,
+            bool,
+            Vec<String>,
+            Vec<String>,
+        ),
     ) {
         let (delimiter, leading_delimiter, markers, values) = legend;
         let header = Header::new(
@@ -389,9 +394,9 @@ mod tests {
         );
     }
 
-    #[test_strategy::proptest]
+    #[proptest::property_test]
     fn the_standard_legend_recovers_every_value(
-        #[strategy(strategies::capture_parts())] parts: strategies::CaptureParts,
+        #[strategy = strategies::capture_parts()] parts: strategies::CaptureParts,
     ) {
         let capture = Header::standard_11().capture(&parts.record()).unwrap();
 

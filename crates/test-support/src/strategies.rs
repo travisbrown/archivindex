@@ -20,19 +20,19 @@ pub fn tokens_of(
 
 #[cfg(test)]
 mod tests {
-    use test_strategy::proptest;
+    use proptest::property_test;
 
-    #[proptest]
+    #[property_test]
     fn string_of_respects_its_alphabet_and_length(
-        #[strategy(super::string_of(vec!['a', 'b'], 3))] text: String,
+        #[strategy = super::string_of(vec!['a', 'b'], 3)] text: String,
     ) {
         assert!((1..=3).contains(&text.chars().count()));
         assert!(text.chars().all(|c| c == 'a' || c == 'b'));
     }
 
-    #[proptest]
+    #[property_test]
     fn tokens_of_concatenates_whole_tokens(
-        #[strategy(super::tokens_of(&["ab", "%20"], 0..=2))] text: String,
+        #[strategy = super::tokens_of(&["ab", "%20"], 0..=2)] text: String,
     ) {
         let mut rest = text.as_str();
         let mut count = 0;

@@ -242,7 +242,7 @@ mod tests {
 
     /// Every digest survives a round trip under both formats, and neither accepts the other's
     /// output.
-    #[test_strategy::proptest]
+    #[proptest::property_test]
     fn digests_round_trip_under_their_own_format(bytes: [u8; 20]) {
         let base32 = encoded::<Base32Sha1>(&bytes);
         let hex = encoded::<PrefixedSha256>(&bytes);

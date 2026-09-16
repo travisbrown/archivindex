@@ -515,8 +515,8 @@ mod tests {
         keys.windows(2).all(|pair| pair[0] <= pair[1])
     }
 
-    #[test_strategy::proptest]
-    fn wayback_keys_are_canonical(#[strategy(strategies::url())] url: String) {
+    #[proptest::property_test]
+    fn wayback_keys_are_canonical(#[strategy = strategies::url()] url: String) {
         let key = Canonicalizer::WAYBACK.surt(&url).unwrap();
 
         prop_assert!(!key.as_str().bytes().any(|byte| byte.is_ascii_uppercase()));
@@ -527,8 +527,8 @@ mod tests {
         prop_assert!(!key.labels().next_back().unwrap().starts_with("www"));
     }
 
-    #[test_strategy::proptest]
-    fn wayback_is_idempotent(#[strategy(strategies::url())] url: String) {
+    #[proptest::property_test]
+    fn wayback_is_idempotent(#[strategy = strategies::url()] url: String) {
         let first = Canonicalizer::WAYBACK.canonicalize(&url).unwrap();
         let second = Canonicalizer::WAYBACK.canonicalize(first.as_str()).unwrap();
 
@@ -542,8 +542,8 @@ mod tests {
         prop_assert_eq!(via_key, key);
     }
 
-    #[test_strategy::proptest]
-    fn warcio_and_heritrix_are_idempotent(#[strategy(strategies::url())] url: String) {
+    #[proptest::property_test]
+    fn warcio_and_heritrix_are_idempotent(#[strategy = strategies::url()] url: String) {
         for rules in [Canonicalizer::WARCIO, Canonicalizer::HERITRIX] {
             let first = rules.canonicalize(&url).unwrap();
             let second = rules.canonicalize(first.as_str()).unwrap();

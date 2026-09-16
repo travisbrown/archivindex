@@ -128,9 +128,9 @@ mod tests {
         assert_eq!(properties.clone().into_static(), properties);
     }
 
-    #[test_strategy::proptest]
+    #[proptest::property_test]
     fn arbitrary_maps_round_trip(
-        #[strategy(strategies::extra_properties())] properties: ExtraProperties,
+        #[strategy = strategies::extra_properties()] properties: ExtraProperties,
     ) {
         let expected = properties.clone();
         let map = serde_json::Map::from(properties);
@@ -138,16 +138,16 @@ mod tests {
         prop_assert_eq!(ExtraProperties::from(map), expected);
     }
 
-    #[test_strategy::proptest]
-    fn serde_round_trips(#[strategy(strategies::extra_properties())] properties: ExtraProperties) {
+    #[proptest::property_test]
+    fn serde_round_trips(#[strategy = strategies::extra_properties()] properties: ExtraProperties) {
         let text = serde_json::to_string(&properties).unwrap();
         let decoded = serde_json::from_str::<ExtraProperties>(&text).unwrap();
 
         prop_assert_eq!(decoded, properties);
     }
 
-    #[test_strategy::proptest]
-    fn inserted_reserved_names_are_rejected(#[strategy(strategies::bare_text())] name: String) {
+    #[proptest::property_test]
+    fn inserted_reserved_names_are_rejected(#[strategy = strategies::bare_text()] name: String) {
         let mut properties = ExtraProperties::default();
         properties.insert(name.clone(), serde_json::Value::Null);
 

@@ -402,7 +402,7 @@ mod tests {
         assert_eq!(location.clone().into_static(), location.into_owned());
     }
 
-    #[test_strategy::proptest]
+    #[proptest::property_test]
     fn numeric_fields_round_trip(status: u16, length: u64, offset: u64) {
         let mut fields = required_fields();
         fields.extend([

@@ -737,20 +737,20 @@ mod tests {
         ));
     }
 
-    #[test_strategy::proptest]
-    fn text_round_trips(#[strategy(strategies::item())] item: Item<'static>) {
+    #[proptest::property_test]
+    fn text_round_trips(#[strategy = strategies::item()] item: Item<'static>) {
         let line = item.to_string();
 
         prop_assert_eq!(Item::parse(&line).map(Item::into_owned).ok(), Some(item));
     }
 
     /// The lenient field object accepts a JSON number wherever it accepts a numeric string.
-    #[test_strategy::proptest]
+    #[proptest::property_test]
     fn numbers_and_numeric_strings_agree(
         status: u16,
         offset: u64,
         length: u64,
-        #[strategy(strategies::json_text())] filename: String,
+        #[strategy = strategies::json_text()] filename: String,
     ) {
         let filename = serde_json::Value::String(filename);
         let quoted = format!(
@@ -768,9 +768,9 @@ mod tests {
         prop_assert_eq!(parsed, serde_json::from_str::<Fields<'_>>(&bare).ok());
     }
 
-    #[test_strategy::proptest]
+    #[proptest::property_test]
     fn conforming_fields_survive_the_lenient_form(
-        #[strategy(strategies::conforming_fields())] fields: ConformingFields<'static>,
+        #[strategy = strategies::conforming_fields()] fields: ConformingFields<'static>,
     ) {
         let lenient = Fields::from(fields.clone());
 

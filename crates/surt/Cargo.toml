@@ -37,4 +37,3 @@ url = { workspace = true, optional = true }
 archivindex-test-support.workspace = true
 proptest.workspace = true
 serde_json.workspace = true
-test-strategy.workspace = true

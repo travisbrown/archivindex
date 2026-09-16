@@ -385,12 +385,12 @@ mod tests {
         "filename",
     ];
 
-    #[test_strategy::proptest]
+    #[proptest::property_test]
     fn document_round_trips(
-        #[strategy(proptest::collection::vec(strategies::capture_parts(), 0..=3))] rows: Vec<
+        #[strategy = proptest::collection::vec(strategies::capture_parts(), 0..=3)] rows: Vec<
             strategies::CaptureParts,
         >,
-        #[strategy(proptest::option::of(strategies::json_text()))] resume_key: Option<String>,
+        #[strategy = proptest::option::of(strategies::json_text())] resume_key: Option<String>,
     ) {
         let document = Document::new(
             NAMES.iter().copied().map(Cow::Borrowed).collect(),
@@ -408,9 +408,9 @@ mod tests {
         );
     }
 
-    #[test_strategy::proptest]
+    #[proptest::property_test]
     fn captures_recover_every_value(
-        #[strategy(strategies::capture_parts())] parts: strategies::CaptureParts,
+        #[strategy = strategies::capture_parts()] parts: strategies::CaptureParts,
     ) {
         let document = Document::new(
             NAMES.iter().copied().map(Cow::Borrowed).collect(),

@@ -254,22 +254,22 @@ mod tests {
     }
 
     /// Aliases resolve to a canonical name that names the same field.
-    #[test_strategy::proptest]
-    fn names_are_canonical(#[strategy(strategies::bare_text())] name: String) {
+    #[proptest::property_test]
+    fn names_are_canonical(#[strategy = strategies::bare_text()] name: String) {
         let field = Field::named(&name);
 
         prop_assert_eq!(&Field::named(field.as_name()), &field);
     }
 
-    #[test_strategy::proptest]
-    fn classic_markers_are_canonical(#[strategy(select(CLASSIC_MARKERS))] marker: &'static str) {
+    #[proptest::property_test]
+    fn classic_markers_are_canonical(#[strategy = select(CLASSIC_MARKERS)] marker: &'static str) {
         let field = Field::classic(marker);
 
         prop_assert_eq!(&Field::named(field.as_name()), &field);
     }
 
-    #[test_strategy::proptest]
-    fn unmodeled_names_are_borrowed_then_owned(#[strategy(strategies::bare_text())] name: String) {
+    #[proptest::property_test]
+    fn unmodeled_names_are_borrowed_then_owned(#[strategy = strategies::bare_text()] name: String) {
         let field = Field::named(&name);
         prop_assume!(matches!(field, Field::Other(_)));
         prop_assert!(matches!(&field, Field::Other(Cow::Borrowed(value)) if *value == name));

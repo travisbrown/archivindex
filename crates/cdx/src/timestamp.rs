@@ -214,8 +214,8 @@ mod tests {
         Ok(())
     }
 
-    #[test_strategy::proptest]
-    fn text_round_trips(#[strategy(strategies::timestamp())] timestamp: Timestamp) {
+    #[proptest::property_test]
+    fn text_round_trips(#[strategy = strategies::timestamp()] timestamp: Timestamp) {
         prop_assert_eq!(
             timestamp.to_string().parse::<Timestamp>().ok(),
             Some(timestamp)
@@ -223,10 +223,10 @@ mod tests {
     }
 
     /// CDX indexes are sorted as text, so the text order has to agree with the value order.
-    #[test_strategy::proptest]
+    #[proptest::property_test]
     fn text_order_matches_value_order(
-        #[strategy(strategies::timestamp())] first: Timestamp,
-        #[strategy(strategies::timestamp())] second: Timestamp,
+        #[strategy = strategies::timestamp()] first: Timestamp,
+        #[strategy = strategies::timestamp()] second: Timestamp,
     ) {
         prop_assert_eq!(
             first.cmp(&second),

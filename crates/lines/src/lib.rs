@@ -415,9 +415,9 @@ mod tests {
 
     /// Every non-blank line is returned once, in order, under its own line number, and each carries
     /// an excerpt bounded by a character count rather than a byte count.
-    #[test_strategy::proptest]
+    #[proptest::property_test]
     fn content_lines_are_returned_with_their_numbers(
-        #[strategy(lines())] input: (Vec<(String, &'static str)>, bool),
+        #[strategy = lines()] input: (Vec<(String, &'static str)>, bool),
     ) {
         let (lines, ends_with_a_line_ending) = input;
         let mut text = String::new();

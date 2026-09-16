@@ -573,9 +573,9 @@ mod tests {
         assert!(serde_json::from_str::<Surt<'_>>("\"nope\"").is_err());
     }
 
-    #[test_strategy::proptest]
+    #[proptest::property_test]
     fn parsing_preserves_components(
-        #[strategy(strategies::key_parts())] parts: strategies::KeyParts,
+        #[strategy = strategies::key_parts()] parts: strategies::KeyParts,
     ) {
         let text = parts.to_string();
         let key = Surt::parse(&text).unwrap();
