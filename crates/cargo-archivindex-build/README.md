@@ -26,11 +26,15 @@ The enforced policy includes the following requirements:
 - a sorted `[workspace.dependencies]` table, with no entry that no member uses, and no member
   restating a dependency the table already declares;
 - `description`, `readme`, and docs.rs metadata on packages that allow publication to a registry;
-- the shared `rustfmt.toml` and `.taplo.toml` settings;
+- the shared `rustfmt.toml`, `.taplo.toml`, and `.rumdl.toml` settings;
 - the `deny.toml` settings that decide how strict a `cargo deny` run is.
 
-It checks the configuration of `rustfmt`, Clippy, Taplo, and `cargo deny`; run those tools
-separately to check source formatting, code, and dependencies.
+It checks the configuration of `rustfmt`, Clippy, Taplo, rumdl, and `cargo deny`; run those tools
+separately to check source formatting, code, documentation, and dependencies.
+
+The rumdl configuration enables MD013 with a 100-character line limit and paragraph reflow.
+Code blocks and tables are exempt. Run `rumdl check .` to check Markdown formatting, or
+`rumdl check --fix .` to apply fixes.
 
 ## Exemptions
 

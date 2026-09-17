@@ -7,7 +7,7 @@ use crate::document::{get, read, read_optional, update};
 use crate::exemption::Exemptions;
 use crate::policy::{
     DENY_ALL_FEATURES, DENY_INTEGER_SETTINGS, DENY_STRING_SETTINGS, DOCS_RS_ALL_FEATURES,
-    DOCS_RS_ARGUMENTS, DOCS_RS_RUSTDOC_ARGS, INHERITED_PACKAGE_FIELDS,
+    DOCS_RS_ARGUMENTS, DOCS_RS_RUSTDOC_ARGS, INHERITED_PACKAGE_FIELDS, RUMDL_BOOLEAN_SETTINGS,
 };
 use crate::project::{Member, Project};
 
@@ -80,6 +80,31 @@ pub fn project(project: &Project) -> Result<Vec<PathBuf>, Error> {
         }
         if get(document, &["formatting", "column_width"]).and_then(Item::as_integer) != Some(100) {
             document["formatting"]["column_width"] = value(100);
+        }
+    })?;
+
+    let rumdl_path = project.root.join(".rumdl.toml");
+    update(&rumdl_path, &mut changed, |document| {
+        for section in ["global", "MD013"] {
+            if document.get(section).is_none() {
+                document[section] = Item::Table(Table::new());
+            }
+        }
+        let enabled = get(document, &["global", "enable"])
+            .and_then(Item::as_array)
+            .is_some_and(|array| array.iter().map(Value::as_str).eq([Some("MD013")]));
+        if !enabled {
+            let mut rules = Array::new();
+            rules.push("MD013");
+            document["global"]["enable"] = value(rules);
+        }
+        if get(document, &["MD013", "line-length"]).and_then(Item::as_integer) != Some(100) {
+            document["MD013"]["line-length"] = value(100);
+        }
+        for (setting, expected) in RUMDL_BOOLEAN_SETTINGS {
+            if get(document, &["MD013", setting]).and_then(Item::as_bool) != Some(expected) {
+                document["MD013"][setting] = value(expected);
+            }
         }
     })?;
 

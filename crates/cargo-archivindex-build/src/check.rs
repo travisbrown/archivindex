@@ -8,7 +8,7 @@ use crate::exemption::Exemptions;
 use crate::policy::{
     DENY_ALL_FEATURES, DENY_INTEGER_SETTINGS, DENY_STRING_SETTINGS, DOCS_RS_ALL_FEATURES,
     DOCS_RS_ARGUMENTS, DOCS_RS_RUSTDOC_ARGS, INHERITED_PACKAGE_FIELDS, PRIORITY_LINTS,
-    PUBLISHED_FIELDS, STRING_LINTS, WORKSPACE_PACKAGE_FIELDS,
+    PUBLISHED_FIELDS, RUMDL_BOOLEAN_SETTINGS, STRING_LINTS, WORKSPACE_PACKAGE_FIELDS,
 };
 use crate::project::{Member, Project};
 use crate::{Error, Violation, dependencies};
@@ -49,6 +49,7 @@ pub fn project(project: &Project) -> Result<Vec<Violation>, Error> {
     exemptions.report_unused(&project.root_manifest, &mut violations);
     rustfmt(project, &mut violations)?;
     taplo(project, &mut violations)?;
+    rumdl(project, &mut violations)?;
     deny(project, &mut violations)?;
     Ok(violations)
 }
@@ -248,6 +249,32 @@ fn deny(project: &Project, violations: &mut Vec<Violation>) -> Result<(), Error>
         check_integer(&document, item_path, expected, &path, violations);
     }
     check_true(&document, &DENY_ALL_FEATURES, &path, violations);
+    Ok(())
+}
+
+fn rumdl(project: &Project, violations: &mut Vec<Violation>) -> Result<(), Error> {
+    let path = project.root.join(".rumdl.toml");
+    let Some(document) = read_optional(&path)? else {
+        push(violations, &path, "file is missing");
+        return Ok(());
+    };
+
+    let enabled = get(&document, &["global", "enable"])
+        .and_then(Item::as_array)
+        .is_some_and(|array| array.iter().map(Value::as_str).eq([Some("MD013")]));
+    if !enabled {
+        push(violations, &path, "`global.enable` must be [\"MD013\"]");
+    }
+    check_integer(&document, &["MD013", "line-length"], 100, &path, violations);
+    for (setting, expected) in RUMDL_BOOLEAN_SETTINGS {
+        if get(&document, &["MD013", setting]).and_then(Item::as_bool) != Some(expected) {
+            push(
+                violations,
+                &path,
+                format!("`MD013.{setting}` must be {expected}"),
+            );
+        }
+    }
     Ok(())
 }
 

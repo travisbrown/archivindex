@@ -174,6 +174,18 @@ unknown-registry = "deny"
 unknown-git = "deny"
 "#;
 
+    const RUMDL: &str = r#"[global]
+enable = ["MD013"]
+
+[MD013]
+line-length = 100
+code-blocks = false
+tables = false
+stern = true
+ignore-link-urls = false
+reflow = true
+"#;
+
     /// A workspace on disk that starts out conforming and can then be broken in one way.
     struct Fixture {
         directory: TempDir,
@@ -192,6 +204,7 @@ unknown-git = "deny"
             fixture.write("member/Cargo.toml", MEMBER);
             fixture.write("member/src/lib.rs", "");
             fixture.write("deny.toml", DENY);
+            fixture.write(".rumdl.toml", RUMDL);
             fixture.write(
                 "rustfmt.toml",
                 "group_imports = \"StdExternalCrate\"\nimports_granularity = \"Module\"\n",
@@ -270,6 +283,7 @@ unknown-git = "deny"
             "deny.toml",
             "rustfmt.toml",
             ".taplo.toml",
+            ".rumdl.toml",
         ];
         let before: Vec<_> = files.iter().map(|file| fixture.read(file)).collect();
 
@@ -303,10 +317,55 @@ unknown-git = "deny"
     #[test]
     fn reports_a_missing_configuration_file() {
         let fixture = Fixture::new();
-        for file in ["deny.toml", "rustfmt.toml", ".taplo.toml"] {
+        for file in ["deny.toml", "rustfmt.toml", ".taplo.toml", ".rumdl.toml"] {
             fs::remove_file(fixture.path().join(file)).expect("the fixture file must exist");
             assert_eq!(fixture.messages(file), ["file is missing"]);
         }
+    }
+
+    #[test]
+    fn sync_creates_missing_rumdl_configuration() {
+        let fixture = Fixture::new();
+        fs::remove_file(fixture.path().join(".rumdl.toml")).expect("the fixture file must exist");
+
+        let report = sync_project(Some(&fixture.manifest())).expect("the fixture must be readable");
+        assert!(report.violations.is_empty(), "{:#?}", report.violations);
+        assert_eq!(report.changed_files, [fixture.path().join(".rumdl.toml")]);
+        assert_eq!(fixture.read(".rumdl.toml"), RUMDL);
+    }
+
+    #[test]
+    fn sync_repairs_rumdl_settings_and_preserves_project_exclusions() {
+        let fixture = Fixture::new();
+        fixture.write(
+            ".rumdl.toml",
+            "# Project exclusions\n[global]\nenable = [\"MD001\"]\nexclude = [\"vendor/**\"]\n\n\
+             [MD013]\nline-length = 80\ncode-blocks = true\ntables = true\nstern = false\n\
+             ignore-link-urls = true\nreflow = false\n",
+        );
+        let messages = fixture.messages(".rumdl.toml");
+        for setting in [
+            "global.enable",
+            "MD013.line-length",
+            "MD013.code-blocks",
+            "MD013.tables",
+            "MD013.stern",
+            "MD013.ignore-link-urls",
+            "MD013.reflow",
+        ] {
+            assert!(mentions(&messages, setting), "{messages:#?}");
+        }
+
+        let report = sync_project(Some(&fixture.manifest())).expect("the fixture must be readable");
+        assert!(report.violations.is_empty(), "{:#?}", report.violations);
+        assert_eq!(report.changed_files, [fixture.path().join(".rumdl.toml")]);
+        let contents = fixture.read(".rumdl.toml");
+        assert!(contents.contains("# Project exclusions"));
+        assert!(contents.contains("exclude = [\"vendor/**\"]"));
+
+        let second = sync_project(Some(&fixture.manifest())).expect("the fixture must be readable");
+        assert!(second.changed_files.is_empty());
+        assert!(second.violations.is_empty());
     }
 
     #[test]

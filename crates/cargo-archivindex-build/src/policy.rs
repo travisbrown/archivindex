@@ -84,3 +84,12 @@ pub const DENY_INTEGER_SETTINGS: [(&[&str], i64); 2] = [
 
 /// The `deny.toml` setting that makes the checks cover optional dependencies.
 pub const DENY_ALL_FEATURES: [&str; 2] = ["graph", "all-features"];
+
+/// Shared Markdown line-length settings.
+pub const RUMDL_BOOLEAN_SETTINGS: [(&str, bool); 5] = [
+    ("code-blocks", false),
+    ("tables", false),
+    ("stern", true),
+    ("ignore-link-urls", false),
+    ("reflow", true),
+];
