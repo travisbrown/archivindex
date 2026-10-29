@@ -220,19 +220,23 @@ complete or truncated response is retained; a later shutdown failure does not in
 
 ### Dependency patches
 
-The observer hooks are not released upstream. The crate uses a pinned wreq fork and matching TLS
-revisions. Cargo does not propagate dependency patches. A consuming workspace that enables `wreq`
-must copy these entries into its root manifest, including when using a local path dependency:
+The observer hooks are not released upstream. The crate pins matching wreq and wreq-util forks,
+TLS crates, and HTTP codecs. Cargo does not propagate dependency patches. A consuming workspace
+that enables `wreq` must copy these entries into its root manifest, including when using a local
+path dependency:
 
 ```toml
 [patch.crates-io]
-wreq = { git = "https://github.com/travisbrown/wreq", rev = "da923c0a4fc7c17bee15c05624844deb719f8ff4" }
-btls = { git = "https://github.com/0x676e67/btls", rev = "6659346432d4e0fb74eda53542e542de25f042e3" }
-btls-sys = { git = "https://github.com/0x676e67/btls", rev = "6659346432d4e0fb74eda53542e542de25f042e3" }
-tokio-btls = { git = "https://github.com/0x676e67/btls", rev = "6659346432d4e0fb74eda53542e542de25f042e3" }
+wreq = { git = "https://github.com/travisbrown/wreq", rev = "bdb34167f759ec7dc62b5b73986fa30b2497be9d" }
+wreq-util = { git = "https://github.com/travisbrown/wreq-util", rev = "69af0555e88cb2882de7a4250a40a828d7eb9a61" }
+btls = { git = "https://github.com/0x676e67/btls", rev = "2acfbfe3240d799112eed51637cf9b01eec5ad25" }
+btls-sys = { git = "https://github.com/0x676e67/btls", rev = "2acfbfe3240d799112eed51637cf9b01eec5ad25" }
+tokio-btls = { git = "https://github.com/0x676e67/btls", rev = "2acfbfe3240d799112eed51637cf9b01eec5ad25" }
+http2 = { git = "https://github.com/0x676e67/http2", rev = "ddb99c6db7222b1c3b9c72d1286b22b1dfb32918" }
+netty = { git = "https://github.com/0x676e67/netty", rev = "52608f297fb53396e8a5fff5b6a286c1460f667a" }
 ```
 
-The manifest pins matching versions of `wreq`, `wreq-proto`, and `wreq-util`. Publication is
+The manifest pins matching versions of `wreq`, `netty`, and `wreq-util`. Publication is
 disabled while the optional client depends on these patches.
 
 ## Development

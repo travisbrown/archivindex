@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use http::{HeaderMap, HeaderValue, StatusCode, Version, header};
+use netty::ext::{OnPreserveHeaderCallback, on_preserve_header};
 use wreq::header::OrigHeaderMap;
-use wreq_proto::ext::{OnPreserveHeaderCallback, on_preserve_header};
 
 use super::Tap;
 use crate::reconstruct::reconstruct_response;
