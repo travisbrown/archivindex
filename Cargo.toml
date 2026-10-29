@@ -25,27 +25,27 @@ ctrlc = { version = "3", features = ["termination"] }
 data-encoding = "2"
 fluent-uri = "0.4"
 futures = "0.3"
-h2 = "0.4.19"
+h2 = "0.4.20"
 http = "1"
 http-body-util = "0.1"
-hyper = { version = "1.11.1", default-features = false, features = ["http1"] }
+hyper = { version = "1.12.0", default-features = false, features = ["http1"] }
 indicatif = "0.18"
 log = "0.4"
-proptest = { version = "1.11", features = ["attr-macro"] }
+proptest = { version = "1.12", features = ["attr-macro"] }
 rcgen = "0.14"
 reqwest = { version = "0.13.5", default-features = false, features = [
   "rustls-no-provider",
   "socks",
 ] }
-rustls = "0.23.45"
+rustls = "0.23.46"
 serde = { version = "1" }
 serde_json = { version = "1", features = ["preserve_order"] }
-sha2 = "0.11.0"
+sha2 = "0.11.1"
 simplelog = "0.12"
 tempfile = "3"
 thiserror = "2"
 tokio = "1"
-tokio-rustls = "0.26.5"
+tokio-rustls = "0.26.6"
 toml = "1"
 toml_edit = "0.25"
 url = "2"
@@ -70,10 +70,12 @@ missing_errors_doc = "allow"
 # Apply the observer fork to both direct and transitive uses of wreq. Consuming workspaces
 # enabling wreq must repeat these patches; see crates/archivindex-http-client/README.md.
 # The TLS crates share one revision.
-wreq = { git = "https://github.com/travisbrown/wreq", rev = "da923c0a4fc7c17bee15c05624844deb719f8ff4" }
-btls = { git = "https://github.com/0x676e67/btls", rev = "6659346432d4e0fb74eda53542e542de25f042e3" }
-btls-sys = { git = "https://github.com/0x676e67/btls", rev = "6659346432d4e0fb74eda53542e542de25f042e3" }
-tokio-btls = { git = "https://github.com/0x676e67/btls", rev = "6659346432d4e0fb74eda53542e542de25f042e3" }
+wreq = { git = "https://github.com/travisbrown/wreq", rev = "f48511ac657bfa4286f3098f00454d078ae51bb6" }
+# Use upstream's zstd update until it is released.
+wreq-util = { git = "https://github.com/0x676e67/wreq-util", rev = "4d21e3b65d6846187e02802172073438944e6399" }
+btls = { git = "https://github.com/0x676e67/btls", rev = "ada9bd9e2eb85ac756975004ae2aa8a9126692ab" }
+btls-sys = { git = "https://github.com/0x676e67/btls", rev = "ada9bd9e2eb85ac756975004ae2aa8a9126692ab" }
+tokio-btls = { git = "https://github.com/0x676e67/btls", rev = "ada9bd9e2eb85ac756975004ae2aa8a9126692ab" }
 
 [[workspace.metadata.archivindex-build.exemptions]]
 package = "archivindex-http-client"
