@@ -177,6 +177,7 @@ dependencies = [
  "http",
  "http-body-util",
  "hyper",
+ "netty",
  "rcgen",
  "reqwest",
  "rustls",
@@ -187,7 +188,6 @@ dependencies = [
  "url",
  "webpki-roots",
  "wreq",
- "wreq-proto",
  "wreq-util",
 ]
 
@@ -497,7 +497,7 @@ dependencies = [
 [[package]]
 name = "btls"
 version = "0.5.6"
-source = "git+https://github.com/0x676e67/btls?rev=ada9bd9e2eb85ac756975004ae2aa8a9126692ab#ada9bd9e2eb85ac756975004ae2aa8a9126692ab"
+source = "git+https://github.com/0x676e67/btls?rev=8879c026b548c25441f83ff58b39d7e22ba1b5b1#8879c026b548c25441f83ff58b39d7e22ba1b5b1"
 dependencies = [
  "bitflags",
  "btls-sys",
@@ -509,7 +509,7 @@ dependencies = [
 [[package]]
 name = "btls-sys"
 version = "0.5.6"
-source = "git+https://github.com/0x676e67/btls?rev=ada9bd9e2eb85ac756975004ae2aa8a9126692ab#ada9bd9e2eb85ac756975004ae2aa8a9126692ab"
+source = "git+https://github.com/0x676e67/btls?rev=8879c026b548c25441f83ff58b39d7e22ba1b5b1#8879c026b548c25441f83ff58b39d7e22ba1b5b1"
 dependencies = [
  "bindgen",
  "cmake",
@@ -996,7 +996,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1301,8 +1301,7 @@ dependencies = [
 [[package]]
 name = "http2"
 version = "0.5.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92d3114be2f413b2e491e686b93a28cda30c355cffc8d091a57f8be4b1342896"
+source = "git+https://github.com/0x676e67/http2?rev=3219d38910c22105ea7fc5464696f26589432e9c#3219d38910c22105ea7fc5464696f26589432e9c"
 dependencies = [
  "atomic-waker",
  "bytes",
@@ -1727,6 +1726,25 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "netty"
+version = "0.2.5"
+source = "git+https://github.com/0x676e67/netty?rev=314db585d85e7ea9c15535f458e7324b800fc702#314db585d85e7ea9c15535f458e7324b800fc702"
+dependencies = [
+ "bytes",
+ "futures-channel",
+ "futures-util",
+ "http",
+ "http-body",
+ "http2",
+ "httparse",
+ "pin-project-lite",
+ "smallvec",
+ "tokio",
+ "tokio-util",
+ "want",
 ]
 
 [[package]]
@@ -2164,7 +2182,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2221,7 +2239,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2518,7 +2536,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2640,7 +2658,7 @@ dependencies = [
 [[package]]
 name = "tokio-btls"
 version = "0.5.6"
-source = "git+https://github.com/0x676e67/btls?rev=ada9bd9e2eb85ac756975004ae2aa8a9126692ab#ada9bd9e2eb85ac756975004ae2aa8a9126692ab"
+source = "git+https://github.com/0x676e67/btls?rev=8879c026b548c25441f83ff58b39d7e22ba1b5b1#8879c026b548c25441f83ff58b39d7e22ba1b5b1"
 dependencies = [
  "btls",
  "btls-sys",
@@ -3071,7 +3089,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -3256,7 +3274,7 @@ dependencies = [
 [[package]]
 name = "wreq"
 version = "0.16.1"
-source = "git+https://github.com/travisbrown/wreq?rev=f48511ac657bfa4286f3098f00454d078ae51bb6#f48511ac657bfa4286f3098f00454d078ae51bb6"
+source = "git+https://github.com/travisbrown/wreq?rev=5ab034a2a8bcae63c1c0384df9266ea4b48b12b9#5ab034a2a8bcae63c1c0384df9266ea4b48b12b9"
 dependencies = [
  "btls",
  "btls-sys",
@@ -3270,6 +3288,7 @@ dependencies = [
  "ipnet",
  "libc",
  "lru",
+ "netty",
  "percent-encoding",
  "pin-project-lite",
  "socket2",
@@ -3279,45 +3298,12 @@ dependencies = [
  "tower",
  "url",
  "webpki-root-certs",
- "wreq-proto",
- "wreq-rt",
-]
-
-[[package]]
-name = "wreq-proto"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb4d829f0427a5064829976fe790641ca21abb1d83d844812baf022dc0bdf2db"
-dependencies = [
- "bytes",
- "futures-channel",
- "futures-util",
- "http",
- "http-body",
- "http2",
- "httparse",
- "pin-project-lite",
- "smallvec",
- "tokio",
- "tokio-util",
- "want",
-]
-
-[[package]]
-name = "wreq-rt"
-version = "0.2.2-rc.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99e9bce67a3fa3dd3f1503f066d86661c9caf399a763d3bd184da7afaf886c8b"
-dependencies = [
- "pin-project-lite",
- "tokio",
- "wreq-proto",
 ]
 
 [[package]]
 name = "wreq-util"
 version = "0.2.0"
-source = "git+https://github.com/0x676e67/wreq-util?rev=4d21e3b65d6846187e02802172073438944e6399#4d21e3b65d6846187e02802172073438944e6399"
+source = "git+https://github.com/travisbrown/wreq-util?rev=69af0555e88cb2882de7a4250a40a828d7eb9a61#69af0555e88cb2882de7a4250a40a828d7eb9a61"
 dependencies = [
  "brotli",
  "flate2",

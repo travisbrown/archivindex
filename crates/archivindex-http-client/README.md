@@ -220,22 +220,23 @@ complete or truncated response is retained; a later shutdown failure does not in
 
 ### Dependency patches
 
-The observer hooks are not released upstream. The crate uses a pinned wreq fork and matching TLS
-revisions. It also pins upstream wreq-util to include an unreleased zstd dependency update that
-resolves security advisories. Cargo does not propagate dependency patches. A consuming workspace
+The observer hooks are not released upstream. The crate pins matching wreq and wreq-util forks,
+TLS crates, and HTTP codecs. Cargo does not propagate dependency patches. A consuming workspace
 that enables `wreq` must copy these entries into its root manifest, including when using a local
 path dependency:
 
 ```toml
 [patch.crates-io]
-wreq = { git = "https://github.com/travisbrown/wreq", rev = "f48511ac657bfa4286f3098f00454d078ae51bb6" }
-wreq-util = { git = "https://github.com/0x676e67/wreq-util", rev = "4d21e3b65d6846187e02802172073438944e6399" }
-btls = { git = "https://github.com/0x676e67/btls", rev = "ada9bd9e2eb85ac756975004ae2aa8a9126692ab" }
-btls-sys = { git = "https://github.com/0x676e67/btls", rev = "ada9bd9e2eb85ac756975004ae2aa8a9126692ab" }
-tokio-btls = { git = "https://github.com/0x676e67/btls", rev = "ada9bd9e2eb85ac756975004ae2aa8a9126692ab" }
+wreq = { git = "https://github.com/travisbrown/wreq", rev = "5ab034a2a8bcae63c1c0384df9266ea4b48b12b9" }
+wreq-util = { git = "https://github.com/travisbrown/wreq-util", rev = "69af0555e88cb2882de7a4250a40a828d7eb9a61" }
+btls = { git = "https://github.com/0x676e67/btls", rev = "8879c026b548c25441f83ff58b39d7e22ba1b5b1" }
+btls-sys = { git = "https://github.com/0x676e67/btls", rev = "8879c026b548c25441f83ff58b39d7e22ba1b5b1" }
+tokio-btls = { git = "https://github.com/0x676e67/btls", rev = "8879c026b548c25441f83ff58b39d7e22ba1b5b1" }
+http2 = { git = "https://github.com/0x676e67/http2", rev = "3219d38910c22105ea7fc5464696f26589432e9c" }
+netty = { git = "https://github.com/0x676e67/netty", rev = "314db585d85e7ea9c15535f458e7324b800fc702" }
 ```
 
-The manifest pins matching versions of `wreq`, `wreq-proto`, and `wreq-util`. Publication is
+The manifest pins matching versions of `wreq`, `netty`, and `wreq-util`. Publication is
 disabled while the optional client depends on these patches.
 
 ## Development

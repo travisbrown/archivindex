@@ -20,7 +20,7 @@ workspace = true
 [features]
 default = []
 # Browser emulation and HTTP/2 require the patches in the workspace manifest.
-wreq = ["dep:wreq", "dep:wreq-proto", "dep:wreq-util", "dep:serde", "tokio/sync", "tokio/macros"]
+wreq = ["dep:wreq", "dep:netty", "dep:wreq-util", "dep:serde", "tokio/sync", "tokio/macros"]
 
 [dependencies]
 archivindex-http.workspace = true
@@ -29,6 +29,7 @@ fluent-uri.workspace = true
 http.workspace = true
 http-body-util.workspace = true
 hyper.workspace = true
+netty = { workspace = true, optional = true }
 reqwest.workspace = true
 rustls.workspace = true
 serde = { workspace = true, optional = true }
@@ -36,8 +37,12 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["rt", "time"] }
 url.workspace = true
 webpki-roots.workspace = true
-wreq = { workspace = true, optional = true, features = ["tokio-rt", "webpki-roots", "socks"] }
-wreq-proto = { workspace = true, optional = true }
+wreq = { workspace = true, optional = true, features = [
+  "tokio-rt",
+  "webpki-roots",
+  "socks",
+  "http2",
+] }
 wreq-util = { workspace = true, optional = true, features = ["emulation", "emulation-serde"] }
 
 [dev-dependencies]
