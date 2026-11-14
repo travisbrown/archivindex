@@ -227,7 +227,7 @@ path dependency:
 
 ```toml
 [patch.crates-io]
-wreq = { git = "https://github.com/travisbrown/wreq", rev = "5ab034a2a8bcae63c1c0384df9266ea4b48b12b9" }
+wreq = { git = "https://github.com/travisbrown/wreq", rev = "729e006cf6f48fb4509147a2e1b7cba2f73699de" }
 wreq-util = { git = "https://github.com/travisbrown/wreq-util", rev = "69af0555e88cb2882de7a4250a40a828d7eb9a61" }
 btls = { git = "https://github.com/0x676e67/btls", rev = "8879c026b548c25441f83ff58b39d7e22ba1b5b1" }
 btls-sys = { git = "https://github.com/0x676e67/btls", rev = "8879c026b548c25441f83ff58b39d7e22ba1b5b1" }
