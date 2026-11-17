@@ -4,7 +4,10 @@
 //! `HTTP-date` as IMF-fixdate, which senders must generate, plus two obsolete forms that recipients
 //! must accept: RFC 850 and asctime. All three denote UTC.
 
-use chrono::{DateTime, Datelike, NaiveDateTime, TimeZone, Utc};
+use jiff::Timestamp;
+use jiff::civil::DateTime;
+use jiff::fmt::rfc2822::DateTimeParser;
+use jiff::tz::Offset;
 
 /// The preferred form: `Sun, 06 Nov 1994 08:49:37 GMT`.
 const IMF_FIXDATE: &str = "%a, %d %b %Y %H:%M:%S GMT";
@@ -22,27 +25,25 @@ const ASCTIME: &str = "%a %b %e %H:%M:%S %Y";
 ///
 /// A date with a numeric zone offset is not an HTTP-date, but is accepted because it is unambiguous
 /// and is what some servers send.
-pub fn parse(value: &str, now: DateTime<Utc>) -> Option<DateTime<Utc>> {
+pub fn parse(value: &str, now: Timestamp) -> Option<Timestamp> {
     let value = value.trim();
 
-    if let Ok(parsed) = NaiveDateTime::parse_from_str(value, IMF_FIXDATE) {
-        return Some(Utc.from_utc_datetime(&parsed));
+    if let Ok(parsed) = DateTime::strptime(IMF_FIXDATE, value) {
+        return Offset::UTC.to_timestamp(parsed).ok();
     }
     if let Some((day_name, rest)) = value.split_once(", ")
         && day_name
             .chars()
             .all(|character| character.is_ascii_alphabetic())
-        && let Ok(parsed) = NaiveDateTime::parse_from_str(rest, RFC_850)
+        && let Ok(parsed) = DateTime::strptime(RFC_850, rest)
     {
-        return anchored_year(parsed, now).map(|parsed| Utc.from_utc_datetime(&parsed));
+        return Offset::UTC.to_timestamp(anchored_year(parsed, now)?).ok();
     }
-    if let Ok(parsed) = NaiveDateTime::parse_from_str(value, ASCTIME) {
-        return Some(Utc.from_utc_datetime(&parsed));
+    if let Ok(parsed) = DateTime::strptime(ASCTIME, value) {
+        return Offset::UTC.to_timestamp(parsed).ok();
     }
 
-    DateTime::parse_from_rfc2822(value)
-        .map(|value| value.to_utc())
-        .ok()
+    DateTimeParser::new().parse_timestamp(value).ok()
 }
 
 /// Re-anchor a two-digit year against `now`.
@@ -50,12 +51,16 @@ pub fn parse(value: &str, now: DateTime<Utc>) -> Option<DateTime<Utc>> {
 /// A date that appears to be more than fifty years in the future represents the most recent past
 /// year with the same last two digits, so the century a date belongs to depends on when it is read.
 /// Only the last two digits of `parsed`'s year are significant here.
-fn anchored_year(parsed: NaiveDateTime, now: DateTime<Utc>) -> Option<NaiveDateTime> {
-    let earliest = now.year() - 49;
+fn anchored_year(parsed: DateTime, now: Timestamp) -> Option<DateTime> {
+    let earliest = Offset::UTC.to_datetime(now).year() - 49;
 
     // `rem_euclid` keeps the offset non-negative, so the result is the first year at or after
     // `earliest` with the same last two digits, and is at most fifty years ahead of `now`.
-    parsed.with_year(earliest + (parsed.year() - earliest).rem_euclid(100))
+    parsed
+        .with()
+        .year(earliest + (parsed.year() - earliest).rem_euclid(100))
+        .build()
+        .ok()
 }
 
 #[cfg(test)]
@@ -70,18 +75,13 @@ mod tests {
         "Sun Nov  6 08:49:37 1994",
     ];
 
-    fn now() -> DateTime<Utc> {
-        Utc.with_ymd_and_hms(2026, 8, 21, 12, 0, 0)
-            .single()
-            .expect("a valid instant")
+    fn now() -> Timestamp {
+        "2026-08-21T12:00:00Z".parse().unwrap()
     }
 
     #[test]
     fn every_specified_form_is_accepted() {
-        let expected = Utc
-            .with_ymd_and_hms(1994, 11, 6, 8, 49, 37)
-            .single()
-            .expect("a valid instant");
+        let expected = "1994-11-06T08:49:37Z".parse().unwrap();
 
         for example in EXAMPLES {
             assert_eq!(parse(example, now()), Some(expected), "{example}");
@@ -96,7 +96,7 @@ mod tests {
             let parsed = parse(&format!("Friday, 21-Aug-{value} 12:00:00 GMT"), now())
                 .unwrap_or_else(|| panic!("{value} is a year"));
 
-            assert_eq!(parsed.year(), expected, "{value}");
+            assert_eq!(Offset::UTC.to_datetime(parsed).year(), expected, "{value}");
         }
     }
 
@@ -115,17 +115,21 @@ mod tests {
     #[test]
     fn preferred_and_asctime_forms_round_trip() {
         for timestamp in (0..253_402_300_799i64).step_by(253_402_301) {
-            let expected = DateTime::from_timestamp(timestamp, 0).unwrap();
+            let expected = Timestamp::from_second(timestamp).unwrap();
+            let datetime = Offset::UTC.to_datetime(expected);
             for offset in [-49, 0, 50] {
-                let now = expected
-                    .with_year(expected.year() - offset)
+                let now = datetime
+                    .with()
+                    .year(datetime.year() - offset)
+                    .build()
+                    .and_then(|datetime| Offset::UTC.to_timestamp(datetime))
                     .unwrap_or(expected);
                 assert_eq!(
-                    parse(&expected.format(IMF_FIXDATE).to_string(), now),
+                    parse(&expected.strftime(IMF_FIXDATE).to_string(), now),
                     Some(expected)
                 );
                 assert_eq!(
-                    parse(&expected.format(ASCTIME).to_string(), now),
+                    parse(&expected.strftime(ASCTIME).to_string(), now),
                     Some(expected)
                 );
             }

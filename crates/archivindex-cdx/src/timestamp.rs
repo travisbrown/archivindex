@@ -3,7 +3,8 @@
 use std::str::FromStr;
 
 use bounded_static::{IntoBoundedStatic, ToBoundedStatic};
-use chrono::{DateTime, Datelike as _, NaiveDateTime, SubsecRound as _, Utc};
+use jiff::civil::{DateTime, DateTimeRound};
+use jiff::{RoundMode, SignedDuration, Unit};
 
 const SECONDS_FORMAT: &str = "%Y%m%d%H%M%S";
 const SECONDS_LENGTH: usize = 14;
@@ -22,42 +23,60 @@ pub struct Error(pub String);
 /// the same instant.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Timestamp {
-    instant: DateTime<Utc>,
+    datetime: DateTime,
     milliseconds: bool,
 }
 
 impl Timestamp {
-    /// Create a timestamp, truncating the instant to whole seconds.
+    /// Create a timestamp from a UTC datetime, truncating it to whole seconds.
     ///
-    /// Rejects years outside `0000..=9999` and leap seconds, which cannot round-trip through the
-    /// supported CDX representations.
-    pub fn new(instant: DateTime<Utc>) -> Result<Self, Error> {
-        Self::with_precision(instant, false)
+    /// Rejects years before `0000`, which cannot round-trip through the supported CDX
+    /// representations. Jiff datetimes cannot represent years after `9999` or leap seconds.
+    ///
+    /// Convert an instant to UTC before constructing a CDX timestamp:
+    ///
+    /// ```
+    /// use archivindex_cdx::timestamp::Timestamp;
+    /// use jiff::tz::Offset;
+    ///
+    /// let instant: jiff::Timestamp = "2020-10-07T21:22:36Z".parse()?;
+    /// let timestamp = Timestamp::new(Offset::UTC.to_datetime(instant))?;
+    /// assert_eq!(timestamp.to_string(), "20201007212236");
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn new(datetime: DateTime) -> Result<Self, Error> {
+        Self::with_precision(datetime, false)
     }
 
-    /// Create a 17-digit timestamp, truncating the instant to milliseconds.
+    /// Create a 17-digit timestamp from a UTC datetime, truncating it to milliseconds.
     ///
-    /// Rejects years outside `0000..=9999` and leap seconds, as [`Self::new`] does.
-    pub fn new_with_milliseconds(instant: DateTime<Utc>) -> Result<Self, Error> {
-        Self::with_precision(instant, true)
+    /// Rejects years before `0000`, as [`Self::new`] does.
+    pub fn new_with_milliseconds(datetime: DateTime) -> Result<Self, Error> {
+        Self::with_precision(datetime, true)
     }
 
-    fn with_precision(instant: DateTime<Utc>, milliseconds: bool) -> Result<Self, Error> {
-        if !(0..=9999).contains(&instant.year())
-            || instant.timestamp_subsec_nanos() >= 1_000_000_000
-        {
-            return Err(Error(instant.to_string()));
+    fn with_precision(datetime: DateTime, milliseconds: bool) -> Result<Self, Error> {
+        if datetime.year() < 0 {
+            Err(Error(datetime.to_string()))
+        } else {
+            let unit = if milliseconds {
+                Unit::Millisecond
+            } else {
+                Unit::Second
+            };
+            Ok(Self {
+                datetime: datetime
+                    .round(DateTimeRound::new().smallest(unit).mode(RoundMode::Floor))
+                    .map_err(|_| Error(datetime.to_string()))?,
+                milliseconds,
+            })
         }
-        Ok(Self {
-            instant: instant.trunc_subsecs(if milliseconds { 3 } else { 0 }),
-            milliseconds,
-        })
     }
 
-    /// The represented UTC instant.
+    /// The represented UTC datetime.
     #[must_use]
-    pub const fn datetime(self) -> DateTime<Utc> {
-        self.instant
+    pub const fn datetime(self) -> DateTime {
+        self.datetime
     }
 
     /// Whether the timestamp includes milliseconds.
@@ -69,9 +88,9 @@ impl Timestamp {
 
 impl std::fmt::Display for Timestamp {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "{}", self.instant.format(SECONDS_FORMAT))?;
+        write!(formatter, "{}", self.datetime.strftime(SECONDS_FORMAT))?;
         if self.milliseconds {
-            write!(formatter, "{:03}", self.instant.timestamp_subsec_millis())?;
+            write!(formatter, "{:03}", self.datetime.millisecond())?;
         }
         Ok(())
     }
@@ -87,19 +106,18 @@ impl FromStr for Timestamp {
             return Err(Error(value.to_owned()));
         }
 
-        let seconds = NaiveDateTime::parse_from_str(&value[..SECONDS_LENGTH], SECONDS_FORMAT)
-            .map_err(|_| Error(value.to_owned()))?
-            .and_utc();
-        // Chrono represents a leap second as second 59 plus at least one billion nanoseconds.
-        if seconds.timestamp_subsec_nanos() >= 1_000_000_000 {
+        // Jiff constrains leap seconds to second 59, but CDX must reject them.
+        if &value[12..SECONDS_LENGTH] == "60" {
             return Err(Error(value.to_owned()));
         }
+        let seconds = DateTime::strptime(SECONDS_FORMAT, &value[..SECONDS_LENGTH])
+            .map_err(|_| Error(value.to_owned()))?;
 
         if value.len() == MILLISECONDS_LENGTH {
             let milliseconds = value[SECONDS_LENGTH..]
                 .parse::<i64>()
                 .map_err(|_| Error(value.to_owned()))?;
-            Self::new_with_milliseconds(seconds + chrono::TimeDelta::milliseconds(milliseconds))
+            Self::new_with_milliseconds(seconds + SignedDuration::from_millis(milliseconds))
         } else {
             Self::new(seconds)
         }
@@ -173,6 +191,9 @@ mod tests {
             "20201307212236",
             "20201007216000",
             "20201007212260",
+            "20161231235960",
+            "20161231235960123",
+            "20230229000000",
         ] {
             assert!(value.parse::<Timestamp>().is_err(), "accepted {value}");
         }
@@ -220,12 +241,7 @@ mod tests {
 
     #[test]
     fn constructors_reject_unrepresentable_instants() {
-        use chrono::TimeZone as _;
-        for instant in [
-            Utc.with_ymd_and_hms(-1, 1, 1, 0, 0, 0).unwrap(),
-            Utc.with_ymd_and_hms(10000, 1, 1, 0, 0, 0).unwrap(),
-            DateTime::from_timestamp(1_483_228_799, 1_000_000_000).unwrap(),
-        ] {
+        for instant in ["-000001-01-01T00:00:00".parse().unwrap(), DateTime::MIN] {
             assert!(Timestamp::new(instant).is_err());
             assert!(Timestamp::new_with_milliseconds(instant).is_err());
         }
@@ -233,19 +249,61 @@ mod tests {
 
     #[test]
     fn constructors_round_trip_at_the_date_boundaries() {
-        use chrono::TimeZone as _;
-        for instant in [
-            Utc.with_ymd_and_hms(0, 1, 1, 0, 0, 0).unwrap(),
-            Utc.with_ymd_and_hms(9999, 12, 31, 23, 59, 59).unwrap(),
+        for (instant, seconds, milliseconds) in [
+            (
+                "0000-01-01T00:00:00".parse().unwrap(),
+                "00000101000000",
+                "00000101000000000",
+            ),
+            (DateTime::MAX, "99991231235959", "99991231235959999"),
         ] {
-            for timestamp in [
-                Timestamp::new(instant).unwrap(),
-                Timestamp::new_with_milliseconds(instant).unwrap(),
+            for (timestamp, text) in [
+                (Timestamp::new(instant).unwrap(), seconds),
+                (
+                    Timestamp::new_with_milliseconds(instant).unwrap(),
+                    milliseconds,
+                ),
             ] {
+                assert_eq!(timestamp.to_string(), text);
                 assert_eq!(
                     timestamp.to_string().parse::<Timestamp>().unwrap(),
                     timestamp
                 );
+            }
+        }
+    }
+
+    /// Truncation drops calendar fractions, including for instants before the Unix epoch.
+    #[test]
+    fn constructors_truncate_fractions_without_changing_the_second() {
+        for (value, seconds, milliseconds) in [
+            (
+                "1969-12-31T23:59:59.123456789",
+                "19691231235959",
+                "19691231235959123",
+            ),
+            (
+                "1969-12-31T23:59:59.999999999",
+                "19691231235959",
+                "19691231235959999",
+            ),
+            (
+                "2020-10-07T21:22:36.123456789",
+                "20201007212236",
+                "20201007212236123",
+            ),
+        ] {
+            let instant = value.parse().unwrap();
+            for (timestamp, text) in [
+                (Timestamp::new(instant).unwrap(), seconds),
+                (
+                    Timestamp::new_with_milliseconds(instant).unwrap(),
+                    milliseconds,
+                ),
+            ] {
+                assert_eq!(timestamp.to_string(), text);
+                assert_eq!(timestamp, text.parse().unwrap());
+                assert!(timestamp.datetime() <= instant);
             }
         }
     }

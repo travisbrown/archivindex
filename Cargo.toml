@@ -18,7 +18,6 @@ archivindex-serde = { version = "0.1.0", path = "crates/archivindex-serde" }
 archivindex-test-support = { path = "crates/archivindex-test-support" }
 bounded-static = "0.8"
 cargo_metadata = "0.23"
-chrono = "0.4"
 clap = { version = "4", features = ["derive"] }
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 ctrlc = { version = "3", features = ["termination"] }
@@ -30,6 +29,7 @@ http = "1"
 http-body-util = "0.1"
 hyper = { version = "1.12.0", default-features = false, features = ["http1"] }
 indicatif = "0.18"
+jiff = { version = "1", default-features = false, features = ["std"] }
 log = "0.4"
 netty = { version = "=0.2.5", default-features = false, features = ["http2"] }
 proptest = { version = "1.12", features = ["attr-macro"] }

@@ -8,9 +8,9 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use archivindex_http::message::ResponseMetadata;
-use chrono::Utc;
 use http::{HeaderMap, Method, Uri, Version, header};
 use http_body_util::BodyExt;
+use jiff::Timestamp;
 use tokio::sync::Notify;
 use wreq::IntoEmulation;
 use wreq::connection_observer::{ConnectionEvent, ConnectionObserver};
@@ -88,7 +88,7 @@ impl WreqClient {
             request.build().map_err(transport_error)?.into();
         http2::observe_headers(&mut request, orig_headers, tap.clone());
         let sent_target = request.uri().clone();
-        let started_at = Utc::now();
+        let started_at = Timestamp::now();
         let clock = Instant::now();
         let operation = tap.receive(client, request, head);
         let expire = async {

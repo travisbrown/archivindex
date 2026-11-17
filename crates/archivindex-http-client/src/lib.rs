@@ -49,9 +49,9 @@ use std::time::{Duration, Instant};
 
 use archivindex_http::body;
 use archivindex_http::message::{RequestMetadata, ResponseMetadata};
-use chrono::{DateTime, Utc};
 use fluent_uri::Uri;
 use http::{HeaderMap, Method, Uri as HttpUri};
+use jiff::Timestamp;
 
 use crate::framing::Truncation;
 
@@ -212,7 +212,7 @@ pub struct Exchange {
     /// The requested URI.
     pub target_uri: Uri<String>,
     /// When network activity began.
-    pub started_at: DateTime<Utc>,
+    pub started_at: Timestamp,
     /// Time from starting network activity to finishing the response.
     pub fetch_time: Duration,
     /// Whether the captured messages are the bytes that crossed the connection.

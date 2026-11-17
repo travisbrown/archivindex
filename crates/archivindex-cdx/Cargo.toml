@@ -21,7 +21,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [dependencies]
 archivindex-serde.workspace = true
 bounded-static.workspace = true
-chrono.workspace = true
+jiff.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 thiserror.workspace = true

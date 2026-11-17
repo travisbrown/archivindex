@@ -24,8 +24,8 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use archivindex_http::message::ResponseMetadata;
-use chrono::Utc;
 use http::{Method, Version};
+use jiff::Timestamp;
 use rustls::pki_types::ServerName;
 
 use crate::framing::ResponseError;
@@ -185,7 +185,7 @@ impl Client for Recorder {
         let prepared = request::headers(authority, headers);
         let request = reconstruct_request(method, &sent_target, Version::HTTP_11, &prepared, body);
 
-        let started_at = Utc::now();
+        let started_at = Timestamp::now();
         let clock = Instant::now();
 
         let stream = if let Some(proxy) = &self.proxy {

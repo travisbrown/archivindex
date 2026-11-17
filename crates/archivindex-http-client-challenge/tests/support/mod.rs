@@ -46,7 +46,7 @@ pub fn captured(url: &str, status: u16, fields: &[(&str, &str)], body: &[u8]) ->
         tls_version: None,
         target_uri: url.to_owned().parse().unwrap(),
         ip_address: None,
-        started_at: chrono::Utc::now(),
+        started_at: jiff::Timestamp::now(),
         fetch_time: Duration::ZERO,
         truncated: None,
     }

@@ -29,11 +29,11 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use archivindex_http::message::ResponseMetadata;
-use chrono::Utc;
 use fluent_uri::Uri;
 use http::{HeaderMap, Method};
 use http_body_util::BodyExt as _;
 use hyper::ext::ReasonPhrase;
+use jiff::Timestamp;
 use reqwest::tls::TlsInfo;
 
 use crate::framing::{ResponseCapture, ResponseError, Truncation};
@@ -186,7 +186,7 @@ impl ReqwestClient {
     ) -> Result<Exchange, Error> {
         let (prepared, request_bytes) = request::prepare(request)?;
         let client = self.client()?;
-        let started_at = Utc::now();
+        let started_at = Timestamp::now();
         let clock = Instant::now();
 
         let response = self

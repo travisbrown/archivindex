@@ -4,7 +4,6 @@ use std::borrow::Cow;
 use std::fmt::Display;
 
 use archivindex_test_support::prop::tokens_of;
-use chrono::{TimeZone as _, Utc};
 use proptest::prelude::*;
 use proptest::sample::select;
 
@@ -63,18 +62,17 @@ pub fn timestamp() -> impl Strategy<Value = Timestamp> {
     (
         946_684_800_i64..1_893_456_000_i64,
         any::<bool>(),
-        0_u32..1_000,
+        0_i32..1_000,
     )
         .prop_map(|(seconds, milliseconds, fraction)| {
-            let instant = Utc
-                .timestamp_opt(seconds, fraction * 1_000_000)
-                .single()
+            let instant = jiff::Timestamp::new(seconds, fraction * 1_000_000)
                 .expect("generated timestamp is in range");
+            let datetime = jiff::tz::Offset::UTC.to_datetime(instant);
 
             if milliseconds {
-                Timestamp::new_with_milliseconds(instant).unwrap()
+                Timestamp::new_with_milliseconds(datetime).unwrap()
             } else {
-                Timestamp::new(instant).unwrap()
+                Timestamp::new(datetime).unwrap()
             }
         })
 }

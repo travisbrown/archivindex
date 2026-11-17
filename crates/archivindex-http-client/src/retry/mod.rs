@@ -2,6 +2,8 @@
 
 use std::time::Duration;
 
+use jiff::Timestamp;
+
 use crate::Error;
 use crate::framing::{ResponseError, Truncation};
 mod date;
@@ -41,11 +43,7 @@ impl RetryDelays {
     /// The delay a `Retry-After` value asks for, or the backoff when there is none or it cannot be
     /// read, capped at the maximum.
     #[must_use]
-    pub fn for_retry_after(
-        &self,
-        value: Option<&str>,
-        now: chrono::DateTime<chrono::Utc>,
-    ) -> Duration {
+    pub fn for_retry_after(&self, value: Option<&str>, now: Timestamp) -> Duration {
         value
             .and_then(|value| parse_retry_after(value, now))
             .unwrap_or(self.backoff)
@@ -64,13 +62,13 @@ pub const fn is_retryable_status(status: u16) -> bool {
 /// RFC 9110 defines the value as a number of seconds or an HTTP-date, and a date that has already
 /// passed asks for no delay at all.
 #[must_use]
-pub fn parse_retry_after(value: &str, now: chrono::DateTime<chrono::Utc>) -> Option<Duration> {
+pub fn parse_retry_after(value: &str, now: Timestamp) -> Option<Duration> {
     let value = value.trim();
     if let Ok(seconds) = value.parse() {
         return Some(Duration::from_secs(seconds));
     }
 
-    let delay = (date::parse(value, now)? - now).to_std();
+    let delay = Duration::try_from(date::parse(value, now)? - now);
 
     Some(delay.unwrap_or(Duration::ZERO))
 }
@@ -92,8 +90,6 @@ pub const fn is_transient(error: &Error) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use chrono::TimeZone as _;
-
     use super::*;
 
     #[test]
@@ -108,7 +104,7 @@ mod tests {
 
     #[test]
     fn retry_after_accepts_seconds_and_http_dates() {
-        let now = chrono::Utc.with_ymd_and_hms(2026, 8, 21, 12, 0, 0).unwrap();
+        let now = "2026-08-21T12:00:00Z".parse().unwrap();
 
         assert_eq!(
             parse_retry_after(" 42 ", now),
@@ -131,6 +127,10 @@ mod tests {
             Some(Duration::from_secs(60))
         );
         assert_eq!(
+            parse_retry_after("Fri, 21 Aug 2026 14:01:00 +0200", now),
+            Some(Duration::from_secs(60))
+        );
+        assert_eq!(
             parse_retry_after("Fri, 21 Aug 2026 11:59:00 GMT", now),
             Some(Duration::ZERO)
         );
@@ -138,8 +138,22 @@ mod tests {
     }
 
     #[test]
+    fn retry_after_preserves_fractional_delays_and_clamps_past_dates() {
+        let now = "2026-08-21T12:00:00.123456789Z".parse().unwrap();
+
+        assert_eq!(
+            parse_retry_after("Fri, 21 Aug 2026 12:00:01 GMT", now),
+            Some(Duration::from_nanos(876_543_211))
+        );
+        assert_eq!(
+            parse_retry_after("Fri, 21 Aug 2026 12:00:00 GMT", now),
+            Some(Duration::ZERO)
+        );
+    }
+
+    #[test]
     fn a_past_retry_after_date_overrides_the_backoff() {
-        let now = chrono::Utc.with_ymd_and_hms(2026, 8, 21, 12, 0, 0).unwrap();
+        let now = "2026-08-21T12:00:00Z".parse().unwrap();
         let delays = RetryDelays::new(Duration::from_secs(5), Duration::from_secs(60));
 
         assert_eq!(

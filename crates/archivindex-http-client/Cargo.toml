@@ -24,11 +24,11 @@ wreq = ["dep:wreq", "dep:netty", "dep:wreq-util", "dep:serde", "tokio/sync", "to
 
 [dependencies]
 archivindex-http.workspace = true
-chrono.workspace = true
 fluent-uri.workspace = true
 http.workspace = true
 http-body-util.workspace = true
 hyper.workspace = true
+jiff.workspace = true
 netty = { workspace = true, optional = true }
 reqwest.workspace = true
 rustls.workspace = true

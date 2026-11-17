@@ -29,7 +29,7 @@ url.workspace = true
 
 [dev-dependencies]
 archivindex-http.workspace = true
-chrono.workspace = true
+jiff.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
