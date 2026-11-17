@@ -30,7 +30,6 @@ http-body-util = "0.1"
 hyper = { version = "1.12.0", default-features = false, features = ["http1"] }
 indicatif = "0.18"
 jiff = { version = "1", default-features = false, features = ["std"] }
-log = "0.4"
 netty = { version = "=0.2.5", default-features = false, features = ["http2"] }
 proptest = { version = "1.12", features = ["attr-macro"] }
 rcgen = "0.14"
@@ -42,13 +41,18 @@ rustls = "0.23.46"
 serde = { version = "1" }
 serde_json = { version = "1", features = ["preserve_order"] }
 sha2 = "0.11.1"
-simplelog = "0.12"
 tempfile = "3"
 thiserror = "2"
 tokio = "1"
 tokio-rustls = "0.26.6"
 toml = "1"
 toml_edit = "0.25"
+tracing = { version = "0.1.44", default-features = false, features = ["std"] }
+tracing-subscriber = { version = "0.3.23", default-features = false, features = [
+  "ansi",
+  "fmt",
+  "tracing-log",
+] }
 url = "2"
 webpki-roots = "1"
 wiremock = "0.6.5"

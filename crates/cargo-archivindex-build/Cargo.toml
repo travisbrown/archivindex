@@ -16,9 +16,9 @@ workspace = true
 archivindex-cli-support.workspace = true
 cargo_metadata.workspace = true
 clap.workspace = true
-log.workspace = true
 thiserror.workspace = true
 toml_edit.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

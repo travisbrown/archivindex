@@ -13,6 +13,8 @@ use std::process::ExitCode;
 use std::sync::Once;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use tracing::level_filters::LevelFilter;
+
 /// The outcome of a command, which determines its exit status.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[repr(u8)]
@@ -52,7 +54,7 @@ pub fn exit_code<E: Into<Box<dyn Error>>>(result: Result<CommandOutcome, E>) -> 
     match result {
         Ok(outcome) => outcome.into(),
         Err(error) => {
-            log::error!("{}", report(error.into().as_ref()));
+            tracing::error!("{}", report(error.into().as_ref()));
             CommandOutcome::OperationalError.into()
         }
     }
@@ -86,7 +88,7 @@ pub fn interrupt_flag() -> &'static AtomicBool {
             }
         });
         if let Err(error) = installed {
-            log::warn!("failed to install signal handler; shutdown may not be clean: {error}");
+            tracing::warn!("failed to install signal handler; shutdown may not be clean: {error}");
         }
     });
 
@@ -137,41 +139,38 @@ impl Verbosity {
 
     /// The most detailed level to log.
     #[must_use]
-    pub const fn level(&self) -> log::LevelFilter {
+    pub const fn level(&self) -> LevelFilter {
         if self.quiet {
-            log::LevelFilter::Error
+            LevelFilter::ERROR
         } else {
             match self.verbose {
-                0 => log::LevelFilter::Warn,
-                1 => log::LevelFilter::Info,
-                2 => log::LevelFilter::Debug,
-                _ => log::LevelFilter::Trace,
+                0 => LevelFilter::WARN,
+                1 => LevelFilter::INFO,
+                2 => LevelFilter::DEBUG,
+                _ => LevelFilter::TRACE,
             }
         }
     }
 
     /// Initialize standard-error logging at the selected level, enabling color when stderr is a
-    /// terminal.
+    /// terminal and the environment permits color. Dependency logs are forwarded to tracing.
     ///
     /// # Panics
     ///
-    /// Panics if a logger has already been installed in this process.
+    /// Panics if a global tracing subscriber or logger has already been installed.
     pub fn init_logging(&self) {
-        let config = simplelog::ConfigBuilder::new()
-            .set_time_level(log::LevelFilter::Off)
-            .build();
+        let color = std::io::stderr().is_terminal()
+            && std::env::var_os("NO_COLOR").is_none()
+            && std::env::var_os("TERM").map_or(cfg!(windows), |term| term != "dumb");
 
-        simplelog::TermLogger::init(
-            self.level(),
-            config,
-            simplelog::TerminalMode::Stderr,
-            if std::io::stderr().is_terminal() {
-                simplelog::ColorChoice::Auto
-            } else {
-                simplelog::ColorChoice::Never
-            },
-        )
-        .expect("invariant violation: the logger is initialized once");
+        tracing_subscriber::fmt()
+            .with_max_level(self.level())
+            .with_writer(std::io::stderr)
+            .without_time()
+            .with_target(false)
+            .with_ansi(color)
+            .try_init()
+            .expect("invariant violation: logging is initialized once");
     }
 }
 
@@ -182,6 +181,7 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use clap::Parser;
+    use tracing::level_filters::LevelFilter;
 
     use super::{CommandOutcome, Verbosity};
 
@@ -200,12 +200,12 @@ mod tests {
 
     #[test]
     fn selects_the_documented_levels() {
-        assert_eq!(verbosity(&[]).level(), log::LevelFilter::Warn);
-        assert_eq!(verbosity(&["--quiet"]).level(), log::LevelFilter::Error);
-        assert_eq!(verbosity(&["-v"]).level(), log::LevelFilter::Info);
-        assert_eq!(verbosity(&["-vv"]).level(), log::LevelFilter::Debug);
-        assert_eq!(verbosity(&["-vvv"]).level(), log::LevelFilter::Trace);
-        assert_eq!(verbosity(&["-vvvv"]).level(), log::LevelFilter::Trace);
+        assert_eq!(verbosity(&[]).level(), LevelFilter::WARN);
+        assert_eq!(verbosity(&["--quiet"]).level(), LevelFilter::ERROR);
+        assert_eq!(verbosity(&["-v"]).level(), LevelFilter::INFO);
+        assert_eq!(verbosity(&["-vv"]).level(), LevelFilter::DEBUG);
+        assert_eq!(verbosity(&["-vvv"]).level(), LevelFilter::TRACE);
+        assert_eq!(verbosity(&["-vvvv"]).level(), LevelFilter::TRACE);
     }
 
     #[test]

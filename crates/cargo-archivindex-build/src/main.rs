@@ -103,11 +103,11 @@ fn run() -> Result<CommandOutcome, Error> {
 /// Log every violation, and report whether any was found.
 fn report(violations: &[Violation]) -> CommandOutcome {
     for violation in violations {
-        log::warn!("{violation}");
+        tracing::warn!("{violation}");
     }
 
     if !violations.is_empty() {
-        log::error!("{} found", plural(violations.len(), "policy violation"));
+        tracing::error!("{} found", plural(violations.len(), "policy violation"));
     }
 
     CommandOutcome::from_reported_problems(!violations.is_empty())
