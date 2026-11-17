@@ -153,11 +153,11 @@ impl Verbosity {
     }
 
     /// Initialize standard-error logging at the selected level, enabling color when stderr is a
-    /// terminal and the environment permits color. Dependency logs are forwarded to tracing.
+    /// terminal and the environment permits color.
     ///
     /// # Panics
     ///
-    /// Panics if a global tracing subscriber or logger has already been installed.
+    /// Panics if a global tracing subscriber has already been installed.
     pub fn init_logging(&self) {
         let color = std::io::stderr().is_terminal()
             && std::env::var_os("NO_COLOR").is_none()

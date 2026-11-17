@@ -48,11 +48,7 @@ tokio-rustls = "0.26.6"
 toml = "1"
 toml_edit = "0.25"
 tracing = { version = "0.1.44", default-features = false, features = ["std"] }
-tracing-subscriber = { version = "0.3.23", default-features = false, features = [
-  "ansi",
-  "fmt",
-  "tracing-log",
-] }
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["ansi", "fmt"] }
 url = "2"
 webpki-roots = "1"
 wiremock = "0.6.5"
