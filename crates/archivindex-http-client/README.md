@@ -185,7 +185,7 @@ IP because the socket peer is the proxy and SOCKS does not reliably identify the
 
 ## Optional wreq client
 
-Enable the `wreq` feature for browser emulation. It requires Rust 1.98 or later, a C and C++
+Enable the `wreq` feature for browser emulation. It requires Rust 1.100 or later, a C and C++
 compiler, CMake, and libclang to build BoringSSL.
 
 ```rust,ignore
@@ -227,13 +227,13 @@ path dependency:
 
 ```toml
 [patch.crates-io]
-wreq = { git = "https://github.com/travisbrown/wreq", rev = "bdb34167f759ec7dc62b5b73986fa30b2497be9d" }
+wreq = { git = "https://github.com/travisbrown/wreq", rev = "54d02b68b764fe5b39ec9c1256d50e8a6fd08f1f" }
 wreq-util = { git = "https://github.com/travisbrown/wreq-util", rev = "69af0555e88cb2882de7a4250a40a828d7eb9a61" }
-btls = { git = "https://github.com/0x676e67/btls", rev = "2acfbfe3240d799112eed51637cf9b01eec5ad25" }
-btls-sys = { git = "https://github.com/0x676e67/btls", rev = "2acfbfe3240d799112eed51637cf9b01eec5ad25" }
-tokio-btls = { git = "https://github.com/0x676e67/btls", rev = "2acfbfe3240d799112eed51637cf9b01eec5ad25" }
+btls = { git = "https://github.com/0x676e67/btls", rev = "3c1dd080ba617d78c63cd09285d2ce31abcdcbf9" }
+btls-sys = { git = "https://github.com/0x676e67/btls", rev = "3c1dd080ba617d78c63cd09285d2ce31abcdcbf9" }
+tokio-btls = { git = "https://github.com/0x676e67/btls", rev = "3c1dd080ba617d78c63cd09285d2ce31abcdcbf9" }
 http2 = { git = "https://github.com/0x676e67/http2", rev = "ddb99c6db7222b1c3b9c72d1286b22b1dfb32918" }
-netty = { git = "https://github.com/0x676e67/netty", rev = "52608f297fb53396e8a5fff5b6a286c1460f667a" }
+netty = { git = "https://github.com/0x676e67/netty", rev = "abaa73d5964af776424f7f5bbd351af9bf52a555" }
 ```
 
 The manifest pins matching versions of `wreq`, `netty`, and `wreq-util`. Publication is
@@ -255,7 +255,7 @@ cargo +nightly fmt --all -- --check
 cargo clippy --workspace --locked --all-targets --all-features -- -D warnings
 cargo test --workspace --locked --no-default-features
 cargo test --workspace --locked --all-features
-cargo +1.98.0 check --workspace --locked --all-targets --all-features
+cargo +1.100.0 check --workspace --locked --all-targets --all-features
 cargo bench -p archivindex-http-client --locked --bench response_capture -- --test
 RUSTDOCFLAGS='-D warnings' cargo doc --workspace --locked --all-features --no-deps
 ```
@@ -266,7 +266,7 @@ read boundaries, every cap through chunked trailers, deadlines, disconnects, aut
 profile overrides, concurrent calls, and calls inside Tokio. The in-memory benchmarks exercise
 short responses, long headers, and long chunk extensions at different read sizes.
 
-CI checks both feature configurations on Linux, baseline clients on macOS and Windows, Rust 1.98
+CI checks both feature configurations on Linux, baseline clients on macOS and Windows, Rust 1.100
 compatibility, and fresh compatible dependencies on stable Rust. It also checks formatting,
 documentation, and the dependency policy.
 

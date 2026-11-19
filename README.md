@@ -39,9 +39,9 @@ Each repository is a separate Cargo workspace.
 
 ## Development
 
-The workspace requires Rust 1.98 or later. The HTTP client's optional `wreq` feature also requires C
-and C++ compilers, CMake, and libclang. You can run all tests and build the documentation with the
-following commands:
+The workspace requires Rust 1.100 or later. The HTTP client's optional `wreq` feature also requires
+C and C++ compilers, CMake, and libclang. You can run all tests and build the documentation with
+the following commands:
 
 ```console
 cargo test --locked --workspace --all-features

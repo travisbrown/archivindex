@@ -162,13 +162,13 @@ jobs:
           cargo test --locked --workspace --features archivindex-surt/url
 
   msrv:
-    name: Rust 1.98 compatibility
+    name: Rust 1.100 compatibility
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.98.0
+          toolchain: 1.100.0
       # The HTTP client's wreq feature builds BoringSSL and uses bindgen.
       - name: Install the native toolchain
         run: sudo apt-get update && sudo apt-get install -y cmake libclang-dev
