@@ -9,10 +9,11 @@ use url::Url;
 
 /// Prepare the next request in a redirect chain using common user-agent semantics.
 ///
-/// `POST` becomes `GET` after `301`, `302`, or `303`; other methods become `GET` after `303`. `307`
-/// and `308` preserve the method and body. Authority-specific fields, a caller-supplied `Host`
-/// among them, are not forwarded to another origin; a redirect within one origin keeps them, so
-/// that a crawl addressing a virtual host by IP address goes on reaching it.
+/// `POST` becomes `GET` after `301`, `302`, or `303`. A `303` also changes other methods to `GET`,
+/// except `HEAD`. A `307` or `308` preserves the method and body.
+///
+/// Redirects to another origin remove `Host`, `Authorization`, `Proxy-Authorization`, and `Cookie`.
+/// Redirects within one origin keep these headers, including a caller-supplied `Host`.
 pub fn redirect_request(
     current: &Url,
     next: &Url,

@@ -45,7 +45,6 @@ pub fn serialize<S: serde::ser::Serializer>(
 pub fn deserialize<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<Option<Cow<'de, str>>, D::Error> {
-    // Let `Option` handle absent values and `BorrowableStr` borrow strings when possible.
     Ok(
         Option::<crate::BorrowableStr<'de>>::deserialize(deserializer)?
             .map(|crate::BorrowableStr(value)| value),

@@ -26,7 +26,7 @@ pub fn timed_out() -> std::io::Error {
     std::io::Error::new(ErrorKind::TimedOut, "no response head arrived in time")
 }
 
-/// Report the failure of an HTTP library as an I/O error of the kind that caused it, when one did.
+/// Preserve the underlying I/O error kind when an HTTP library reports a transport failure.
 ///
 /// `timed_out` is the library's own verdict, for a timeout that it does not report as an I/O
 /// error. Failures without an I/O cause retain their client-specific variant.

@@ -1,4 +1,5 @@
-//! Per-fetch transport observation and message capture.
+//! Keep one observer and connection per fetch so bytes from retries, pooling, or concurrent
+//! requests cannot be attributed to the wrong capture.
 
 mod http2;
 

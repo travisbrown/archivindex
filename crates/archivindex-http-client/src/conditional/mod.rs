@@ -1,23 +1,15 @@
-//! HTTP validators and selection of representations declared by Vary.
+//! Match stored responses to requests using `Vary`, and apply HTTP validators.
 
 use std::borrow::Cow;
 use std::str::Utf8Error;
 
 use archivindex_http::message::ResponseMetadata;
 
-/// Read the `Vary` field of a recorded response, combining its lines as a recipient does.
+/// Read all `Vary` lines from a recorded response as one comma-separated value.
 ///
-/// A server may send `Vary` as several field lines, which a recipient combines into one
-/// comma-separated value (RFC 9110 section 5.3). Reading only the first line would drop the
-/// selecting fields the later lines name, so a request differing in one of them would be taken to
-/// select the stored representation and could reuse validators describing other bytes.
-///
-/// A line that is not readable as text names no field a later request could be matched against, so
-/// the value becomes `*`, leaving the representation [`Unselectable`](Variance::Unselectable)
-/// rather than silently narrowing what the server declared.
-///
-/// The result is the `vary` argument of [`Variance::declared`] and
-/// [`Variance::declared_without_request`]; `None` means the response declared no `Vary` at all.
+/// An invalid UTF-8 value produces `*`, making the response
+/// [`Unselectable`](Variance::Unselectable). Returns `None` when no `Vary` field is present.
+/// Pass the result to [`Variance::declared`] or [`Variance::declared_without_request`].
 #[must_use]
 pub fn declared_vary(metadata: &ResponseMetadata<'_>) -> Option<String> {
     metadata.combined_header("vary").map_or_else(
@@ -26,20 +18,13 @@ pub fn declared_vary(metadata: &ResponseMetadata<'_>) -> Option<String> {
     )
 }
 
-/// What a stored response declared about the request fields that select its representation.
+/// The request headers that must match before a stored response's validators can be reused.
 ///
-/// HTTP allows one URI to have several representations chosen by request header fields, which a
-/// response announces in `Vary`. Stored validators belong to the representation that was actually
-/// captured, so a later request may reuse them only when it selects that same representation.
-/// Without the check, a crawl configured with a different `User-Agent` could revalidate against
-/// another variant's `ETag` and accept a `304 Not Modified` for a representation it never received.
-///
-/// A response that declares no `Vary` is treated as invariant, as an HTTP cache treats it: a server
-/// that varies its representations without saying so is indistinguishable from one that does not
-/// vary at all.
+/// For example, `Vary: User-Agent` prevents a request with a different user agent from reusing the
+/// stored `ETag`. With an absent or empty `Vary`, any request for the same URI can reuse them.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum Variance {
-    /// The response declared no `Vary` field, so every request for the URI selects it.
+    /// The response's `Vary` is absent or empty, so every request for the URI selects it.
     #[default]
     Invariant,
     /// The stored representation cannot be selected by request header fields.
@@ -62,9 +47,8 @@ impl Variance {
     /// returns the request's value for a lowercase field name, or `Ok(None)` when the request sent no
     /// such field; a field that was not sent is distinct from one sent empty. A field sent as
     /// several lines is resolved as their combined value, using `; ` for `Cookie` and `, ` for
-    /// fields allowing comma-separated values. RFC 9111 section 4.1 also permits normalizing white
-    /// space and list order. This model compares values as sent, which may prevent reuse but cannot
-    /// select the wrong representation.
+    /// fields allowing comma-separated values. Values are compared as sent; differences in
+    /// whitespace or list order prevent a match even when the values are equivalent.
     ///
     /// UTF-8 errors and values containing line breaks yield [`Variance::Unselectable`]. Callers
     /// must unfold recorded header values before passing them here.
@@ -110,9 +94,8 @@ impl Variance {
 
     /// Record the variance a response declared when the originating request is unavailable.
     ///
-    /// A response naming selecting fields becomes [`Variance::Unselectable`]: with no record of the
-    /// request that produced it, there is nothing for a later request to match. State recovered
-    /// this way therefore supports revalidation only when its response declared no `Vary`.
+    /// Without the original request, revalidation is possible only if `Vary` is absent or empty.
+    /// Otherwise the result is [`Variance::Unselectable`].
     #[must_use]
     pub fn declared_without_request(vary: Option<&str>) -> Self {
         match vary {
@@ -123,8 +106,7 @@ impl Variance {
 
     /// Whether a request selects the representation this state was stored for.
     ///
-    /// Validators must not be sent for a request this returns `false` for: the server would answer
-    /// about a representation other than the one the request selects.
+    /// Send the stored validators only when this returns `true`.
     ///
     /// `field` follows the same contract as in [`Variance::declared`]. A UTF-8 error in any
     /// selecting field prevents a match.

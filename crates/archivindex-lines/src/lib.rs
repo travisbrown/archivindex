@@ -1,17 +1,12 @@
 //! Read lines with size limits and source locations for errors.
 //!
-//! When parsing an index file, we often need to report which file and line caused an error.
-//! [`Lines`] keeps track of this information while reading UTF-8 lines. It limits the size of each
-//! line and removes trailing CR and LF bytes. Blank lines are skipped by default, or you can reject
-//! them with [`Lines::reject_blank_lines`]. Lines containing other whitespace are not considered
-//! blank.
+//! [`Lines`] reads UTF-8 lines and tracks their source name and line number for error reporting.
+//! It limits line size and removes trailing CR and LF bytes. Blank lines are skipped by default;
+//! use [`Lines::reject_blank_lines`] to reject them. Lines containing other whitespace are not blank.
 //!
 //! Each successful read returns the line's content, source name, and line number, borrowing from
 //! the reader. If parsing fails, use [`LineContextRef::into_excerpt`] to keep the location and an
 //! excerpt for an error message.
-//!
-//! [`Error`] distinguishes I/O failures from invalid content. You can convert it to
-//! [`std::io::Error`] when your API uses that error type.
 //!
 //! ```
 //! let mut lines =
@@ -50,10 +45,7 @@ pub struct LineContext {
 
 /// A line's content and location, borrowed from the reader.
 ///
-/// This value borrows the source name and content without allocating. Call
-/// [`Self::into_excerpt`] when you need to keep the location after reading another line, for
-/// example to report a parsing error. The reader cannot be used mutably while its source name or
-/// content is still borrowed.
+/// Use [`Self::into_excerpt`] to keep the location and a short excerpt for an error message.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct LineContextRef<'a> {
     /// The source name supplied by the caller, such as a file path.
@@ -137,7 +129,6 @@ impl Error {
 
 /// Preserve the location and reason for APIs that expose only I/O errors.
 ///
-/// The original [`Error`] can be recovered with [`std::io::Error::get_ref`] and `downcast_ref`.
 /// Rejected content becomes [`std::io::ErrorKind::InvalidData`].
 impl From<Error> for std::io::Error {
     fn from(error: Error) -> Self {
@@ -204,9 +195,8 @@ impl<R: BufRead> Lines<R> {
     /// Blank lines are skipped rather than returned, but still counted, unless the source was built
     /// with [`Self::reject_blank_lines`]. `None` marks the end of the stream.
     ///
-    /// Successful reads borrow the source name and content, though the read buffer may need to
-    /// grow. Read errors include a copy of the source name but no excerpt. Use
-    /// [`LineContextRef::into_excerpt`] to keep a successful read's location and a short excerpt.
+    /// Read errors include the source name and line number, but no excerpt. Use
+    /// [`LineContextRef::into_excerpt`] to attach an excerpt to a subsequent parsing error:
     ///
     /// ```
     /// let mut lines = archivindex_lines::Lines::with_source(&b"42\n"[..], "numbers");

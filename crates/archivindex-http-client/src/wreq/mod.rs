@@ -1,6 +1,6 @@
 //! HTTP/1 wire capture and reconstructed HTTP/2 capture with browser TLS emulation.
 //!
-//! Each fetch owns an isolated `wreq` client and runtime. Redirects, retries, cookies, automatic
+//! Each fetch makes one request on a new connection. Redirects, retries, cookies, automatic
 //! proxies, decompression, and pooling are disabled. The selected profile supplies TLS and HTTP/2
 //! settings; configured request headers override profile headers.
 //!
@@ -12,8 +12,36 @@
 //! coding is preserved and chunked framing retains response trailers. Both HTTP versions also
 //! record the negotiated TLS version when available.
 //!
-//! Calls are synchronous and can run inside an existing Tokio runtime. See the crate README for
-//! capture limits, reconstruction, and timeout semantics.
+//! Calls are synchronous and can run inside an existing Tokio runtime. See the
+//! [crate documentation](crate) for shared limits, timeouts, and proxy configuration.
+//!
+//! # Configuration
+//!
+//! Enable the `wreq` feature and apply the patches in the [build guide]. Building BoringSSL also
+//! requires C and C++ compilers, CMake, and libclang.
+//!
+//! ```no_run
+//! use archivindex_http_client::wreq::{WreqClient, parse_profile};
+//!
+//! let client = WreqClient::new(parse_profile("chrome_136")?);
+//! let http2_client = client.clone().http2(true);
+//! let firefox = client.profile(parse_profile("firefox_136")?);
+//! # Ok::<(), archivindex_http_client::wreq::UnknownProfile>(())
+//! ```
+//!
+//! Profiles supply TLS settings, default headers, header ordering and casing, and HTTP/2 settings.
+//! Explicit request headers override profile values. [`parse_profile`] rejects unknown names; you
+//! can also pass a `wreq_util::Profile` from the pinned dependency directly.
+//!
+//! # HTTP/2 capture
+//!
+//! Enable [`WreqClient::http2`] to offer the profile's protocols. The server may still choose
+//! HTTP/1.1. HTTP/2 pseudo-headers become the request line, `host`, or response status. Responses
+//! with bodies use generated chunk framing to keep trailers separate. `HEAD`, `204`, and `304`
+//! keep their bodyless form and representation headers. Captures omit binary frames, HPACK state,
+//! and original framing declarations.
+//!
+//! [build guide]: https://github.com/travisbrown/archivindex/blob/main/crates/archivindex-http-client/BUILDING.md
 
 mod capture;
 mod variant_name;
@@ -174,7 +202,7 @@ impl Engine {
     }
 }
 
-/// Report a wreq failure as an I/O error of the kind that caused it, when one did.
+/// Preserve the underlying I/O error kind in a wreq failure.
 fn transport_error(error: wreq::Error) -> Error {
     let timed_out = error.is_timeout();
 
@@ -207,9 +235,7 @@ mod tests {
     use super::parse_profile;
     use crate::Engine;
 
-    /// A profile's name is recovered from its serialized form, which only a fieldless variant
-    /// has. Checking every profile shows that none is reported without a name, and that each name
-    /// is the one `parse_profile` reads back.
+    /// Every profile must report a name that `parse_profile` accepts as the same profile.
     #[test]
     fn every_profile_is_named_as_it_is_parsed() {
         for &profile in Profile::VARIANTS {

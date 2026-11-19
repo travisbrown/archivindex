@@ -3,38 +3,19 @@
 Data models for [classic CDX][cdx], [CDXJ][cdxj], and the [Wayback Machine's CDX JSON][wayback-cdx].
 
 Web archive indexes describe when a URL was captured and where the archived record can be found.
-This crate provides a model for each format under `format`, along with a shared `Entry` model
-that all three formats can convert to. Format-specific entries preserve each format's structure;
-the shared entry exposes common fields independently of the source format.
+This crate preserves each format's structure and provides a common entry model for tools that
+consume more than one format.
 
-Parsed values borrow strings from the input where possible. Import
-`bounded_static::IntoBoundedStatic` and use `into_static` to keep a value after the input is
-dropped. Use `bounded_static::ToBoundedStatic::to_static` to obtain an owned copy without consuming
-the value.
+It supports custom classic CDX legends, CDX server pagination, timestamps with second or millisecond
+precision, and additional fields. CDXJ entries can accommodate incomplete records or require the
+mandatory fields of the CDXJ specification.
 
-```rust
-use archivindex_cdx::format::cdxj::Entry;
+[`archivindex-surt`](../archivindex-surt/) provides URL keys and canonicalization;
+[`archivindex-lines`](../archivindex-lines/) provides bounded line reading and error locations.
+This crate supplies the record models rather than file storage or index searching.
 
-let entry = Entry::parse(
-    r#"com,example)/ 20201007212236 {"url":"https://example.com/","status":"200"}"#,
-).unwrap();
-
-assert_eq!(entry.key, "com,example)/");
-assert_eq!(entry.timestamp.to_string(), "20201007212236");
-assert_eq!(entry.fields.status, Some(200));
-```
-
-Use `entry.validate()?` to check the key and mandatory CDXJ fields without cloning.
-For a field object alone, use `fields.validate()?`. Successful checks do not allocate.
-To retain a conforming entry, `ConformingEntry::try_from(entry)?` moves its owned strings and
-extension properties. Passing `&entry` instead validates first, then clones the data.
-
-Serialize a CDXJ entry with `entry.to_line()?`. This checks the key, rejects extension properties
-that duplicate standard fields, and returns any serialization error. `ConformingEntry` requires
-all mandatory JSON fields, but its editable key is still checked when writing the line.
-
-Other crates handle reading index files, sorting them, looking up entries, and using WARC record
-offsets and lengths to read archived data.
+See the [Rustdoc reference](../../README.md#documentation) for parsing, validation, and conversion
+examples.
 
 ## License
 

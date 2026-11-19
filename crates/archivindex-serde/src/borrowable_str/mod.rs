@@ -1,12 +1,7 @@
 //! Borrow strings inside an `Option` or a `Vec`.
 //!
-//! For a `Cow<'a, str>` field, `#[serde(borrow)]` is enough to borrow from the input. For an
-//! `Option<Cow<'a, str>>` or a `Vec<Cow<'a, str>>`, use it with `#[serde(with)]` and the
-//! corresponding module below. These modules use [`crate::BorrowableStr`] to borrow each string
-//! when possible.
-//!
-//! Both modules serialize exactly as the derived implementation would, and the `serialize`
-//! definitions are provided solely to support use with `with`.
+//! Use `#[serde(borrow, with = "...")]` with [`option`] for optional strings or [`seq`] for
+//! sequences. Serialization is unchanged.
 
 use std::borrow::Cow;
 use std::marker::PhantomData;
@@ -32,7 +27,6 @@ impl<'de: 'a, 'a> Deserialize<'de> for BorrowableStr<'a> {
                 formatter.write_str("a string")
             }
 
-            /// Called when the format can lend a slice that lives as long as the input.
             fn visit_borrowed_str<E: serde::de::Error>(
                 self,
                 value: &'de str,
@@ -40,7 +34,6 @@ impl<'de: 'a, 'a> Deserialize<'de> for BorrowableStr<'a> {
                 Ok(BorrowableStr(Cow::Borrowed(value)))
             }
 
-            /// Called when the string cannot be borrowed, for example after decoding a JSON escape.
             fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Self::Value, E> {
                 Ok(BorrowableStr(Cow::Owned(value.to_owned())))
             }

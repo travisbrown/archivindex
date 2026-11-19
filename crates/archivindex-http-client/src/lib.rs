@@ -1,13 +1,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
-//! Several Archivindex tools (including in particular the WARC archiver) aim to capture byte-exact
-//! representations of HTTP requests and responses. In some cases this is not practical, or is not
-//! fully supported by the archiving format (as in the case of [WARC and HTTP/2]). This module
-//! provides a client abstraction and several implementations that support different protocols at
-//! different levels of fidelity.
+//! HTTP clients that capture request and response messages.
 //!
-//! [WARC and HTTP/2]: https://github.com/iipc/warc-specifications/discussions/112
-//!
-//! Three clients are currently provided:
+//! Choose a client according to the protocols and capture fidelity you need:
 //!
 //! - [`Recorder`](recorder::Recorder) performs HTTP/1.1 over its own connection and captures the
 //!   exact bytes sent and received.
@@ -18,10 +12,74 @@
 //!   negotiates only when asked to.
 //!
 //! [`Exchange::fidelity`] says whether a captured exchange is exact or reconstructed, and
-//! [`Exchange::http_protocol`] says which HTTP version it used. Every client frames and truncates
-//! responses with [`ResponseCapture`](framing::ResponseCapture). Once a complete response head is
+//! [`Exchange::http_protocol`] says which HTTP version it used. Once a complete response head is
 //! captured, a size limit, disconnect, or timeout retains the response received so far and records
 //! why it ended.
+//!
+//! # Fetching
+//!
+//! Calls are synchronous, including when called from a Tokio runtime. Each fetch makes one request
+//! on a new connection. Clients do not follow redirects, retry, keep cookies, decompress content,
+//! or read proxy settings from the environment.
+//!
+//! ```no_run
+//! use archivindex_http_client::recorder::Recorder;
+//! use archivindex_http_client::{Client, Request};
+//! use http::{HeaderMap, Method};
+//!
+//! let captured = Recorder::new().fetch(Request {
+//!     method: &Method::GET,
+//!     target: &"https://www.example.com/".parse()?,
+//!     headers: &HeaderMap::new(),
+//!     body: None,
+//! })?;
+//! println!("{}: {} body bytes", captured.status, captured.entity_body()?.len());
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! Use [`Client::fetch_with_deadline`] to set an absolute deadline. Use [`prepare`], [`redirect`],
+//! [`retry`], and [`conditional`] when managing a request sequence yourself.
+//!
+//! # Limits and timeouts
+//!
+//! Connection and I/O timeouts default to [`DEFAULT_TIMEOUT`], and the response size limit to
+//! [`DEFAULT_MAX_RESPONSE_LENGTH`]. Setters accept `None` to remove a bound. The response limit counts
+//! captured bytes, including the final head and generated framing in reconstructed messages. Each
+//! head also has a separate 64 KiB limit. Interim responses are discarded and do not consume the
+//! final response limit. A response ending exactly at its limit is complete.
+//!
+//! Before a complete final head arrives, a timeout or disconnect returns an error. Afterward, a size
+//! limit, timeout, or disconnect returns the captured prefix with [`Exchange::truncated`] set.
+//! Malformed framing remains an error.
+//!
+//! | Client | Connection timeout | I/O timeout | Deadline |
+//! | --- | --- | --- | --- |
+//! | `Recorder` | Each address tried | Each socket read or write | Excludes DNS |
+//! | `ReqwestClient` | DNS, TCP, and TLS | Response head, then each body frame | Wall clock |
+//! | `WreqClient` | DNS, TCP, and TLS | Idle progress after connecting | Wall clock |
+//!
+//! Reqwest's first I/O wait includes connecting and sending the request. Wreq's HTTP/2 control
+//! traffic cannot keep a stalled exchange alive. A system DNS lookup may finish in the background
+//! after a reqwest or wreq fetch times out.
+//!
+//! # TLS and proxies
+//!
+//! The recorder and reqwest use `webpki-roots` and `aws-lc-rs`, independently of the operating system
+//! trust store and process-wide provider. Their `tls_config` setters accept replacement trust
+//! settings; both restrict ALPN to `http/1.1`. Wreq accepts a replacement certificate store through
+//! `tls_cert_store`. Default configurations verify certificates and hostnames.
+//!
+//! All clients accept `socks5://` for local DNS and `socks5h://` for proxy DNS. The default port is
+//! 1080. Username and password credentials are percent-encoded, for example
+//! `socks5h://user:p%40ssword@host:1080`. Other proxy schemes are rejected. Proxy failures never fall
+//! back to direct connections, and SOCKS negotiation is excluded from the captured messages.
+//!
+//! ```no_run
+//! use archivindex_http_client::recorder::Recorder;
+//!
+//! let client = Recorder::new().proxy(Some("socks5h://127.0.0.1:1080"))?;
+//! # Ok::<(), archivindex_http_client::InvalidProxy>(())
+//! ```
 
 mod chunked;
 pub mod conditional;
@@ -55,10 +113,10 @@ use jiff::Timestamp;
 
 use crate::framing::Truncation;
 
-/// The default connection and I/O timeout.
+/// The default connection and I/O timeout: 30 seconds.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
-/// The default limit on captured response bytes, including the head and transfer framing.
+/// The default response limit: 256 MiB, including the head and transfer framing.
 pub const DEFAULT_MAX_RESPONSE_LENGTH: u64 = 256 * 1024 * 1024;
 
 /// Errors returned by a client while performing a captured exchange.
@@ -207,6 +265,14 @@ pub enum TlsVersion {
 }
 
 /// One captured exchange and its transport metadata.
+///
+/// Messages use HTTP/1 syntax even when the connection used HTTP/2. [`fidelity`](Self::fidelity)
+/// distinguishes exact from reconstructed bytes; [`http_protocol`](Self::http_protocol) records
+/// the connection's protocol. Interim `1xx` responses are discarded.
+///
+/// Use [`request_metadata`](Self::request_metadata) and [`response_metadata`](Self::response_metadata)
+/// to inspect headers, [`message_body`](Self::message_body) for the response bytes after the head,
+/// or [`entity_body`](Self::entity_body) to remove transfer framing while preserving content coding.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Exchange {
     /// The requested URI.
@@ -219,7 +285,8 @@ pub struct Exchange {
     pub fidelity: Fidelity,
     /// The HTTP version the exchange used. The captured messages are HTTP/1 messages either way.
     pub http_protocol: HttpProtocol,
-    /// The negotiated TLS version, when the exchange used TLS and the client can observe it.
+    /// The negotiated TLS version, when available. Absent for plaintext exchanges and reqwest's
+    /// SOCKS connections.
     pub tls_version: Option<TlsVersion>,
     /// The origin IP address, when known. Proxied captures omit it because the socket peer is
     /// the proxy and the tunnel does not reliably identify the origin address.
@@ -279,6 +346,14 @@ impl Exchange {
 }
 
 /// Borrowed inputs for one HTTP exchange.
+///
+/// Targets must be absolute HTTP or HTTPS URIs and are validated before network activity. Userinfo
+/// is removed from the transport target; supply origin credentials in an explicit `authorization`
+/// header. [`Exchange::target_uri`] retains the URI supplied here.
+///
+/// Clients add a missing `host` header and default HTTP/1.1 requests to `connection: close`.
+/// Caller-supplied `content-length` and `transfer-encoding` fields are removed; a supplied body is
+/// framed with its actual length. `None` supplies no body; `Some(&[])` supplies an empty body.
 #[derive(Clone, Copy, Debug)]
 pub struct Request<'a> {
     /// The request method.
@@ -295,9 +370,8 @@ pub struct Request<'a> {
 
 /// The HTTP implementation that performs a client's exchanges.
 ///
-/// An engine is displayed in the `User-Agent` product syntax of [RFC 9110]: its name, then `/` and
-/// its version when it has one, then its profile as a parenthesized comment when it has one. For
-/// example, `wreq/0.16.1 (chrome_136)`.
+/// Displays in the `User-Agent` product syntax of [RFC 9110], for example
+/// `wreq/0.16.1 (chrome_136)`. The version and profile are optional.
 ///
 /// [RFC 9110]: https://www.rfc-editor.org/rfc/rfc9110#section-10.1.5
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -347,7 +421,7 @@ impl std::fmt::Display for Engine {
 
 /// Performs and captures one HTTP exchange.
 ///
-/// Implementations can be shared across threads, including through an `Arc<dyn Client>`.
+/// Clients can be shared across threads.
 pub trait Client: Debug + Send + Sync + 'static {
     /// The HTTP implementation that performs this client's exchanges.
     fn engine(&self) -> Engine;

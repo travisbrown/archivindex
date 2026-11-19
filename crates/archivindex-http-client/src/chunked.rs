@@ -7,8 +7,8 @@ use http::{HeaderMap, header};
 
 /// Whether `headers` declare `chunked` as the final transfer coding.
 ///
-/// This is the test [`ResponseCapture`](crate::framing::ResponseCapture) applies to a captured
-/// header section, so a body written as chunks whenever it holds is framed as the capture expects.
+/// Use the same framing rule as [`ResponseCapture`](crate::framing::ResponseCapture) so that
+/// reconstructed bodies match their captured headers.
 pub fn is_declared(headers: &HeaderMap) -> bool {
     headers
         .get_all(header::TRANSFER_ENCODING)

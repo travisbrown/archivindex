@@ -8,6 +8,9 @@
 This repository contains data models and support crates shared by Archivindex's web archiving and
 indexing tools.
 
+The crates are pre-1.0, and APIs may change between releases. Check each crate's README for its
+scope and license before integrating it.
+
 ## Crates
 
 | Crate                                                                            | Description                                                                      |
@@ -40,13 +43,34 @@ Each repository is a separate Cargo workspace.
 ## Development
 
 The workspace requires Rust 1.100 or later. The HTTP client's optional `wreq` feature also requires
-C and C++ compilers, CMake, and libclang. You can run all tests and build the documentation with
-the following commands:
+C and C++ compilers, CMake, and libclang. See the HTTP client's
+[build guide](crates/archivindex-http-client/BUILDING.md) for dependency patches required by
+consuming workspaces.
+
+From the repository root, build the workspace with its default features:
+
+```console
+cargo build --locked --workspace
+```
+
+To run the tests with all optional features enabled:
 
 ```console
 cargo test --locked --workspace --all-features
+```
+
+## Documentation
+
+Each crate's Rustdoc contains API usage, examples, and behavior guarantees. Build the complete
+reference locally with:
+
+```console
 RUSTDOCFLAGS="-D warnings" cargo doc --locked --workspace --all-features --no-deps
 ```
+
+Open `target/doc/<crate_name>/index.html`, using underscores in place of hyphens in the crate name.
+The [build tool usage guide](crates/cargo-archivindex-build/USAGE.md) covers its command-line
+interface.
 
 ## License
 

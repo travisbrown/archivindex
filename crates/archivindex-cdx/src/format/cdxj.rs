@@ -47,11 +47,11 @@ pub struct Entry<'a, F = Fields<'a>> {
 }
 
 impl<'a> Entry<'a> {
-    /// Check the key and the presence of all required CDXJ 0.1.0 fields without cloning the entry.
+    /// Check the key and required CDXJ 0.1.0 fields.
     ///
     /// Rejects empty keys, whitespace in keys, missing required fields, and extension properties
-    /// with reserved names. Successful validation does not allocate. Use [`ConformingEntry::try_from`]
-    /// to retain a conforming value, passing the entry by value to reuse its owned data.
+    /// with reserved names. Use [`ConformingEntry::try_from`] to keep the validated fields in a
+    /// conforming entry.
     pub fn validate(&self) -> Result<(), ConformanceError> {
         validate_key(&self.key, ConformanceError::InvalidKey)?;
         self.fields.validate()
@@ -364,7 +364,7 @@ pub enum ConformanceError {
 impl Fields<'_> {
     /// Check that required CDXJ 0.1.0 fields are present and extension names are not reserved.
     ///
-    /// URL and digest strings are not parsed. Successful validation does not allocate.
+    /// URL and digest strings are not parsed.
     /// Use [`Entry::validate`] to check the key as well, or [`ConformingFields::try_from`] to retain
     /// a conforming field object.
     pub fn validate(&self) -> Result<(), ConformanceError> {

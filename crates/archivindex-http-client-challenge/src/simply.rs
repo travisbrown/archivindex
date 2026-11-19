@@ -40,7 +40,8 @@ impl ProofOfWork {
 
     /// Read the clearance cookie from a complete verification response.
     ///
-    /// The response must be a successful JSON answer recorded for this proof's verification URL.
+    /// The response must have status `200`, be complete, and contain a successful JSON answer
+    /// recorded for this proof's verification URL. Returns `None` otherwise.
     #[must_use]
     pub fn clearance_cookie(&self, captured: &Exchange) -> Option<CookieValue> {
         if captured.status != 200

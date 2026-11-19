@@ -16,9 +16,8 @@
 //! - A chunked body is reconstructed with one chunk for each piece of body data `reqwest`
 //!   delivers. Chunk boundaries are therefore not the origin's, and chunk extensions are lost.
 //!
-//! The original reason phrase is preserved, including an empty phrase. Content coding is never
-//! removed, so the entity-body is the one the origin sent. The client turns off each of
-//! `reqwest`'s decoders, so this holds even when another crate in the build enables them.
+//! The original reason phrase is preserved, including an empty phrase. Content coding is preserved
+//! even when another crate enables reqwest's decompression features.
 //!
 //! The negotiated TLS version is reported for direct connections only, because `reqwest` does not
 //! expose it for a connection made through a SOCKS proxy.
@@ -138,7 +137,7 @@ impl ReqwestClient {
             .redirect(reqwest::redirect::Policy::none())
             .retry(reqwest::retry::never())
             .referer(false)
-            // Any crate in the build can enable these decoders, and each is on once enabled.
+            // Capture must preserve content coding even if another crate enables these decoders.
             .no_gzip()
             .no_brotli()
             .no_deflate()
@@ -316,7 +315,7 @@ const fn tls_version(version: reqwest::tls::Version) -> Option<TlsVersion> {
     }
 }
 
-/// Report a `reqwest` failure as an I/O error of the kind that caused it, when one did.
+/// Preserve the underlying I/O error kind in a `reqwest` failure.
 fn transport_error(error: reqwest::Error) -> Error {
     let timed_out = error.is_timeout();
 

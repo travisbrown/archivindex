@@ -51,7 +51,25 @@ pub const MAX_CHALLENGE_ANSWERS: usize = 3;
 /// Fetches answer at most [`MAX_CHALLENGE_ANSWERS`] challenges and preserve the original method,
 /// headers, and body when repeating a request. Unknown challenges, truncated responses, and refused
 /// verification responses end the sequence. Redirects also end it unless following is enabled.
-/// Ordinary `Set-Cookie` fields are ignored.
+/// Ordinary `Set-Cookie` fields are ignored. Transport failures are not retried.
+///
+/// Calls are synchronous. Reuse a session to keep its clearance cookies; cloned sessions share
+/// cookies and can fetch concurrently. A successful fetch does not imply clearance: inspect the
+/// final response, which may still be a challenge or a refused verification. On failure,
+/// [`Error::exchanges`] contains earlier completed exchanges.
+///
+/// # Request behavior
+///
+/// Sessions add `Accept-Encoding: identity` unless the request supplies a value. Recognition
+/// removes transfer framing but does not decompress content, so compressed challenges cannot be
+/// answered. Truncated responses are returned without further challenge handling.
+///
+/// Simply.com verification sends a form POST to `/.sc-verify/` on the challenged origin. It keeps
+/// the original `User-Agent`, `Accept-Language`, `Authorization`, `Proxy-Authorization`, `Host`,
+/// and `Cookie` fields. Resource body metadata, validators, and range headers are omitted.
+///
+/// Use [`fetch_with`](Self::fetch_with) and an [`Observer`] to prepare requests or process each
+/// capture before the next request. Use [`recognize`] directly for a custom challenge loop.
 #[derive(Clone, Debug)]
 pub struct Session<C: Client> {
     client: C,
@@ -95,12 +113,18 @@ pub struct ProofOfWork {
 
 /// Recognize and solve a challenge in a complete captured response.
 ///
-/// The captured target identifies the challenged origin. Proof-of-work searches test at most
-/// ten million candidates and check `deadline` before each batch of 256 attempts. `None` means
-/// the response is unrecognized, malformed, truncated, or beyond the supported work limits, or
-/// the deadline has passed. Sucuri responses are limited to 256 KiB, decoded scripts to 64 KiB,
-/// and each expression to 4 KiB, including cookie attributes. Their deadline is checked before
-/// each concatenation. Content coding is not decoded.
+/// Returns `None` if the response is unrecognized, malformed, truncated, exceeds the work limits,
+/// or cannot be solved before `deadline`. The captured target identifies the challenged origin.
+/// Content coding is not decoded.
+///
+/// Proof searches try at most ten million candidates. Varnish difficulty is limited to five
+/// hexadecimal digits; Simply.com difficulty is limited to 20 leading zero bits. These limits do
+/// not guarantee a solution. Sucuri responses are limited to 256 KiB, decoded scripts to 64 KiB,
+/// and each expression to 4 KiB, including cookie attributes.
+///
+/// Sucuri recognition requires status `307`, `x-sucuri-id`, and a supported cookie script. Varnish
+/// requires status `202`, `Server: Varnish`, and proof data. Simply.com requires status `454` and
+/// its token and proof data.
 #[must_use]
 pub fn recognize(captured: &Exchange, deadline: Option<Instant>) -> Option<Challenge> {
     if captured.truncated.is_some() || deadline.is_some_and(|deadline| Instant::now() >= deadline) {

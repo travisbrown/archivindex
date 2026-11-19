@@ -1,29 +1,15 @@
 # archivindex-serde
 
-String deserialization, borrowing, and `FromStr` helpers for [Serde][serde].
+String deserialization helpers for [Serde][serde], shared by Archivindex data models.
 
-When deserializing strings, we can often avoid allocating by borrowing from the input. Serde's
-default `Cow<str>` deserialization produces an owned string even when borrowing is possible.
-`BorrowableStr` borrows when the deserializer supports it and serializes as a plain string.
+The borrowing helpers retain references to input strings where the format permits, including
+strings inside optional fields and sequences. Serialization remains ordinary string serialization.
+This is useful for parsing many records without allocating every text field.
 
-```rust
-use std::borrow::Cow;
-use archivindex_serde::BorrowableStr;
+A separate helper connects string deserialization to a type's `FromStr` implementation, with
+errors that describe the expected value.
 
-#[derive(serde::Deserialize, serde::Serialize)]
-struct Record<'a> {
-    #[serde(borrow)]
-    name: BorrowableStr<'a>,
-}
-
-let record = serde_json::from_str::<Record<'_>>(r#"{"name":"plain"}"#).unwrap();
-
-assert!(matches!(record.name.0, Cow::Borrowed("plain")));
-```
-
-The `borrowable_str::option` and `borrowable_str::seq` modules also let you borrow strings inside an
-`Option` or a `Vec`, where `#[serde(borrow)]` alone is not enough. The `from_str` helper
-deserializes a string using a type's `FromStr` implementation.
+See the [Rustdoc reference](../../README.md#documentation) for field attributes and examples.
 
 ## License
 

@@ -30,20 +30,7 @@ pub struct Timestamp {
 impl Timestamp {
     /// Create a timestamp from a UTC datetime, truncating it to whole seconds.
     ///
-    /// Rejects years before `0000`, which cannot round-trip through the supported CDX
-    /// representations. Jiff datetimes cannot represent years after `9999` or leap seconds.
-    ///
-    /// Convert an instant to UTC before constructing a CDX timestamp:
-    ///
-    /// ```
-    /// use archivindex_cdx::timestamp::Timestamp;
-    /// use jiff::tz::Offset;
-    ///
-    /// let instant: jiff::Timestamp = "2020-10-07T21:22:36Z".parse()?;
-    /// let timestamp = Timestamp::new(Offset::UTC.to_datetime(instant))?;
-    /// assert_eq!(timestamp.to_string(), "20201007212236");
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
+    /// The input must already be in UTC. Rejects years before `0000`.
     pub fn new(datetime: DateTime) -> Result<Self, Error> {
         Self::with_precision(datetime, false)
     }

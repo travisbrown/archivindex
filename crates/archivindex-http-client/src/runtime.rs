@@ -6,11 +6,6 @@ use http::Uri;
 
 use crate::{Error, Exchange, request};
 
-/// Check the target and the deadline, then drive one exchange on a runtime of its own.
-///
-/// The runtime lives on a dedicated thread, so a caller inside an async runtime does not nest
-/// `block_on`, and every task of the exchange is disposed of when the exchange ends. `start` runs
-/// on that thread, and is given the target as the RFC 3986 URI it was checked to be.
 pub fn fetch<F: Future<Output = Result<Exchange, Error>>>(
     target: &Uri,
     deadline: Option<Instant>,
@@ -18,6 +13,7 @@ pub fn fetch<F: Future<Output = Result<Exchange, Error>>>(
 ) -> Result<Exchange, Error> {
     let target_uri = request::validate(target, deadline)?;
 
+    // Use a dedicated thread so callers already running on Tokio do not nest `block_on`.
     std::thread::scope(|scope| {
         scope
             .spawn(|| {

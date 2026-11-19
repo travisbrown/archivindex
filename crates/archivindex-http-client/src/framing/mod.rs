@@ -1,8 +1,7 @@
 //! Message framing shared by every capture client.
 //!
-//! [`ResponseCapture`] turns received bytes into the captured response of one exchange. It owns the
-//! rules that decide where a response ends, when it is complete, and why it was cut short. Clients
-//! feed it either observed HTTP/1 bytes or a reconstructed message.
+//! [`ResponseCapture`] finds the response boundary, applies capture limits, and records why an
+//! incomplete response ended. It accepts either observed HTTP/1 bytes or a reconstructed message.
 
 mod chunk;
 mod head;
@@ -99,9 +98,9 @@ impl ResponseCapture {
 
     /// Feed newly received bytes.
     ///
-    /// Extra bytes beyond the cap provide length evidence but are not retained. Interim heads
-    /// have their own bound and do not consume the final cap. Bytes offered after the capture is
-    /// done are ignored.
+    /// Bytes beyond the limit help determine whether the response is complete but are not retained.
+    /// Interim heads have their own size limit and do not count toward the response limit.
+    /// Bytes offered after the capture is done are ignored.
     ///
     /// # Errors
     ///

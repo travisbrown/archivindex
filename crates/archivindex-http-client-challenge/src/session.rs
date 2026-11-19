@@ -36,6 +36,11 @@ impl<C: Client> Session<C> {
     }
 
     /// Follow at most this many redirects, sharing one deadline and challenge budget.
+    ///
+    /// The default is zero. Redirects and challenge answers have separate counters, and neither
+    /// resets the deadline. Unusable locations and redirects past the limit end the sequence with
+    /// the response retained. Method and header changes follow
+    /// [`redirect_request`].
     #[must_use]
     pub const fn max_redirects(mut self, maximum: usize) -> Self {
         self.max_redirects = maximum;
@@ -44,7 +49,7 @@ impl<C: Client> Session<C> {
 
     /// Access retained cookies. Release the guard before fetching through this or another session.
     ///
-    /// Poisoned locks retain the jar, since internal critical sections only read or update cookies.
+    /// Returns the retained jar even if an earlier holder panicked.
     pub fn cookies(&self) -> MutexGuard<'_, CookieJar> {
         self.cookies
             .lock()
@@ -60,6 +65,36 @@ impl<C: Client> Session<C> {
     ///
     /// The same deadline applies to every request and proof search in the sequence. Passing
     /// `None` is equivalent to [`fetch`](Self::fetch); the client's configured timeouts still apply.
+    /// If proof solving exceeds the deadline, the error retains the challenge capture.
+    ///
+    /// ```no_run
+    /// use std::time::{Duration, Instant};
+    /// use archivindex_http_client::{recorder::Recorder, Request};
+    /// use archivindex_http_client_challenge::Session;
+    /// use http::{HeaderMap, Method};
+    ///
+    /// let session = Session::new(Recorder::new());
+    /// let result = session.fetch_with_deadline(
+    ///     Request {
+    ///         method: &Method::GET,
+    ///         target: &"https://example.com/".parse()?,
+    ///         headers: &HeaderMap::new(),
+    ///         body: None,
+    ///     },
+    ///     Some(Instant::now() + Duration::from_secs(30)),
+    /// );
+    /// let exchanges = match result {
+    ///     Ok(exchanges) => exchanges,
+    ///     Err(error) => {
+    ///         eprintln!("{}", error.source);
+    ///         error.exchanges
+    ///     }
+    /// };
+    /// for exchange in exchanges {
+    ///     println!("{} {}", exchange.target_uri, exchange.status);
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn fetch_with_deadline(
         &self,
         request: Request<'_>,
@@ -82,6 +117,8 @@ impl<C: Client> Session<C> {
     /// prepared exchange is observed exactly once before another request is attempted. No cookie
     /// lock is held during callbacks or network activity. The return value counts followed redirects.
     /// Verification requests are marked separately so callers can omit representation validators.
+    /// Preparation failures stop the sequence; the observer has already received earlier exchanges.
+    /// Ordinary [`fetch`](Self::fetch) methods collect these exchanges instead.
     pub fn fetch_with<O: Observer>(
         &self,
         request: Request<'_>,

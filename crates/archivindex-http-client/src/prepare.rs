@@ -82,7 +82,6 @@ pub fn target_uri_text(url: &Url) -> Cow<'_, str> {
 
     for character in text[path_start..].chars() {
         if needs_encoding(character) {
-            // Writing to a `String` cannot fail.
             let _ = write!(encoded, "%{:02X}", u32::from(character));
         } else {
             encoded.push(character);

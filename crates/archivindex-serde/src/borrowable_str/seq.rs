@@ -62,7 +62,6 @@ pub fn deserialize<'de, D: Deserializer<'de>>(
             let hint = sequence.size_hint().unwrap_or_default();
             let mut values = Vec::with_capacity(hint.min(CAPACITY_HINT_LIMIT));
 
-            // Unwrap elements directly into the output vector, without an intermediate collection.
             while let Some(crate::BorrowableStr(value)) = sequence.next_element()? {
                 values.push(value);
             }

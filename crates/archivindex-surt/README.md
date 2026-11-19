@@ -4,38 +4,26 @@
 
 A SURT reorders a URL's host so that keys for related pages sort together: `www.example.com`
 becomes `com,example,www`, and everything under `example.com` shares the prefix `com,example`.
+These keys are used in archive indexes such as [CDX](../archivindex-cdx/).
 
-```rust
-use archivindex_surt::Surt;
+The crate supports the Wayback Machine and [warcio.js][warcio] normalization conventions, with
+configurable rules for URL equivalence. For example, the default Wayback rules map
+`https://www.Example.com:443/Movies/?b=2&a=1#top` to `com,example)/movies?a=1&b=2`.
 
-let key = Surt::from_url("https://www.Example.com:443/Movies/?b=2&a=1#top").unwrap();
+Rendering supports standard SURT, [Heritrix][heritrix] SURT, and [SSURT][ssurt]. Rendering and URL
+normalization are separate choices; selecting Heritrix's key syntax does not select its
+canonicalization policy.
 
-assert_eq!(key.as_str(), "com,example)/movies?a=1&b=2");
-assert_eq!(key.labels().collect::<Vec<_>>(), ["com", "example"]);
-assert_eq!(key.url().to_string(), "https://example.com/movies?a=1&b=2");
-```
+## Integrations
 
-`Surt::from_url` applies the Wayback Machine's rules for deciding which URLs share a key. For
-example, it lowercases the URL and removes a leading `www` from the host. Use `url::Canonicalizer`
-to choose the rules used by [warcio.js][warcio] or to configure individual rules yourself.
-`Canonicalizer::COMMON_ONLY` applies only the common normalization rules. You can then use
-`url::Url` to write the result as a SURT, a [Heritrix][heritrix] SURT, or an [SSURT][ssurt].
-Heritrix SURT rendering is independent of Heritrix's configurable canonicalization policy.
+| Feature      | Default | Support                               |
+| ------------ | ------- | ------------------------------------- |
+| `serde`      | yes     | Serialize and deserialize SURT keys   |
+| `fluent-uri` | yes     | Convert to and from `fluent_uri::Uri` |
+| `url`        | no      | Convert to and from `url::Url`        |
 
-Tests compare the results with fixtures from the Python [surt][surt-python] library,
-[warcio.js][warcio], and the Wayback Machine's own `urlkey` values.
-
-`Surt` and `url::Url` implement `bounded_static::ToBoundedStatic` and
-`bounded_static::IntoBoundedStatic`. Import the traits to use `to_static` for an owned copy or
-`into_static` to consume the value and reuse any owned text.
-
-## Features
-
-| Feature          | Default | Description                                           |
-| ---------------- | ------- | ----------------------------------------------------- |
-| `serde`          | yes     | Serialize and deserialize `Surt`                      |
-| `fluent-uri`     | yes     | Conversions to and from `fluent_uri::Uri`             |
-| `url`            | no      | Conversions to and from `url::Url`                    |
+See the [Rustdoc reference](../../README.md#documentation) for parsing keys and configuring
+canonicalization.
 
 ## License
 
@@ -47,5 +35,4 @@ This crate is licensed under either the [MIT License][mit] or the
 [mit]: https://opensource.org/license/mit
 [ssurt]: https://github.com/iipc/urlcanon/blob/master/ssurt.rst
 [surt]: http://crawler.archive.org/articles/user_manual/glossary.html#surt
-[surt-python]: https://github.com/internetarchive/surt
 [warcio]: https://github.com/webrecorder/warcio.js

@@ -6,6 +6,28 @@
 //!
 //! The other modules define field names, additional JSON properties, timestamps, and CDX server
 //! query parameters.
+//!
+//! # Parsing and conversion
+//!
+//! Choose a parser from [`format`](mod@format), then convert to [`Entry`] when you need to process
+//! entries independently of their source format. For CDXJ:
+//!
+//! ```
+//! use archivindex_cdx::format::cdxj::Entry;
+//!
+//! let entry = Entry::parse(
+//!     r#"com,example)/ 20201007212236 {"url":"https://example.com/","status":"200"}"#,
+//! )?;
+//! assert_eq!(entry.key, "com,example)/");
+//! assert_eq!(entry.fields.status, Some(200));
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! CDXJ's default [`Fields`](format::cdxj::Fields) permits missing fields. Use
+//! [`validate`](format::cdxj::Entry::validate) to check conformance or convert to
+//! [`ConformingEntry`](format::cdxj::ConformingEntry) to retain validated fields.
+//! [`to_line`](format::cdxj::Entry::to_line) serializes either form, checking the key and rejecting
+//! extension names that duplicate standard fields.
 
 pub mod field;
 pub mod format;

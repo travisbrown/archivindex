@@ -68,7 +68,7 @@ missing_errors_doc = "allow"
 
 [patch.crates-io]
 # Apply the observer fork to both direct and transitive uses of wreq. Consuming workspaces
-# enabling wreq must repeat these patches; see crates/archivindex-http-client/README.md.
+# enabling wreq must repeat these patches; see crates/archivindex-http-client/BUILDING.md.
 # The TLS crates share one revision.
 wreq = { git = "https://github.com/travisbrown/wreq", rev = "54d02b68b764fe5b39ec9c1256d50e8a6fd08f1f" }
 # Match the emulation profiles to the fork's TLS and HTTP/2 APIs.

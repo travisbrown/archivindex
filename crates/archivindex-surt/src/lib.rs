@@ -83,8 +83,7 @@ struct Shape {
 /// the brackets, so `2001:db8::1:8080)/path` is interpreted as the address `2001:db8::1:8080`
 /// with no separate port.
 ///
-/// Parsed keys borrow their text from the input. Import [`IntoBoundedStatic`] and use
-/// [`into_static`](IntoBoundedStatic::into_static) to keep a key after the input is dropped.
+/// Parsed keys borrow their text from the input.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Surt<'a> {
     key: Cow<'a, str>,
@@ -386,7 +385,6 @@ impl<'de: 'a, 'a> serde::Deserialize<'de> for Surt<'a> {
             }
         }
 
-        // `Surt<'de>` coerces to `Surt<'a>` because `'de: 'a`.
         deserializer.deserialize_str(SurtVisitor)
     }
 }

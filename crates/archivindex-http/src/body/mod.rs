@@ -74,9 +74,8 @@ pub enum Framing {
 
 /// Extract an entity-body using an explicit framing policy.
 ///
-/// The transfer-coding support described in [`entity_body`] applies under either policy, so
-/// unsupported codings are errors under either policy. Malformed or incomplete chunk framing is an
-/// error only under [`Framing::Declared`].
+/// Both policies reject unsupported transfer codings; see [`entity_body`]. Only
+/// [`Framing::Declared`] rejects malformed or incomplete chunk framing.
 pub fn entity_body_with_policy(message: &[u8], policy: Framing) -> Result<Cow<'_, [u8]>, Error> {
     let (body, transfer_encoding) = split_message(message)?;
 
@@ -139,20 +138,16 @@ fn split_message(message: &[u8]) -> Result<(&[u8], Vec<u8>), Error> {
 /// This checks decoder support, not just the presence of `chunked`: valid HTTP values such as
 /// `gzip, chunked` are rejected because this crate cannot remove the additional transfer coding.
 fn is_chunked(transfer_encoding: &[u8]) -> Result<bool, Error> {
-    // Remove ignored elements.
     let mut filtered = transfer_encoding
         .split(|&byte| byte == b',')
         .map(<[u8]>::trim_ascii)
         .filter(|coding| !coding.is_empty() && !coding.eq_ignore_ascii_case(IDENTITY));
 
     match filtered.next() {
-        // There's one element, and it matches `chunked`.
         Some(coding) if coding.eq_ignore_ascii_case(CHUNKED) && filtered.next().is_none() => {
             Ok(true)
         }
-        // No elements.
         None => Ok(false),
-        // Unsupported elements.
         Some(_) => Err(Error::UnsupportedTransferEncoding(lossy(
             transfer_encoding.trim_ascii(),
         ))),

@@ -1,40 +1,21 @@
 # archivindex-http
 
-HTTP/1 message parsing and body extraction, without an HTTP client or async runtime.
+Parse stored HTTP/1 messages and extract their bodies without an HTTP client or async runtime.
+The parser reads request and response metadata without changing the original bytes, including
+repeated and folded headers found in archived captures.
 
-`message::RequestMetadata` and `message::ResponseMetadata` parse start lines and headers, locate
-body offsets, and expose repeated or combined header values. They leave the input bytes unchanged
-and borrow from them, copying a header value only to unfold its continuation lines.
-Combined values return `Ok(None)` for an absent field and a UTF-8 error for an unreadable value.
+Body extraction removes chunk framing and trailers while preserving content coding such as gzip.
+Strict framing detects incomplete chunked bodies. An optional inference policy also handles
+archives whose chunk framing was removed without updating the headers, as in older Common Crawl
+captures. Inference can leave incomplete framing untouched or mistake decoded content for chunks.
 
-`body::message_body` returns the bytes after the head unchanged, including any chunk framing and
-trailers. The caller supplies one message; the function does not enforce `Content-Length` or check
-whether a body is permitted. `body::entity_body` removes chunk framing and trailers while preserving
-content coding. It uses `Framing::Declared`, requiring complete chunk framing when chunked encoding
-is declared. `body::entity_body_with_policy` also supports `Framing::Inferred`. For a body declared
-chunked, it decodes chunks only if the whole body is chunk framing, though trailers and the empty
-line ending them may be missing. Otherwise it assumes the body has already been dechunked and
-returns it unchanged, so a truncated chunked body is returned with its framing. Callers must account
-for request methods and response statuses that forbid a body.
+This crate works on one message at a time; it does not find message boundaries in a network stream
+or decompress content. For live capture, use
+[`archivindex-http-client`](../archivindex-http-client/), which applies transport limits and records
+complete or truncated exchanges.
 
-Only chunked transfer decoding is supported. `Transfer-Encoding: gzip, chunked` is valid HTTP but
-requires gzip decompression after dechunking, so both policies reject it. `Content-Encoding: gzip`
-with `Transfer-Encoding: chunked` is supported and leaves the gzip content coding intact.
-
-Inferred framing accommodates records such as older Common Crawl ARC and WARC captures, which
-retained `Transfer-Encoding: chunked` after removing chunk framing. Common Crawl documents this in
-its [archive conversion notes][common-crawl-headers].
-
-[common-crawl-headers]: https://github.com/commoncrawl/arc2warc-conversion#required-rewriting-of-http-headers
-
-```rust
-use archivindex_http::{body, message::ResponseMetadata};
-
-let response = b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n0\r\n\r\n";
-let metadata = ResponseMetadata::parse(response).unwrap();
-assert_eq!(metadata.status, 200);
-assert_eq!(body::entity_body(response).unwrap().as_ref(), b"hello");
-```
+See the [Rustdoc reference](../../README.md#documentation) for parsing examples and framing
+policies.
 
 ## License
 

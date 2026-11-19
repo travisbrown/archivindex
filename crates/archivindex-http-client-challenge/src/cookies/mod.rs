@@ -2,7 +2,11 @@
 //!
 //! Cookies are scoped to the exact host. This helper does not implement path, expiry, or `Domain`
 //! matching. Cookies marked `Secure`, or supplied for an HTTPS URL, are sent only over HTTPS. It
-//! supports supplied and challenge-clearance cookies, not general browser cookie handling.
+//! stores supplied and challenge-clearance cookies. Ordinary `Set-Cookie` responses are ignored.
+//!
+//! [`CookieJar::insert_for`] preloads a cookie for a URL; URLs containing credentials are rejected.
+//! [`CookieJar::merged`] combines stored cookies with request cookies. Request values take precedence
+//! over stored values with the same name, and multiple fields are combined into one `Cookie` field.
 
 use std::collections::HashMap;
 
@@ -32,7 +36,6 @@ pub struct CookieValue {
 }
 
 impl Cookie {
-    /// The name before the `=`, or the whole pair when it has none.
     fn name(&self) -> &[u8] {
         pair_name(&self.pair)
     }

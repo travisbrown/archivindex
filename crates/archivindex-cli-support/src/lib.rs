@@ -47,9 +47,7 @@ impl From<CommandOutcome> for ExitCode {
 
 /// Convert a command result to an exit code, logging operational errors.
 ///
-/// An error is logged as its message followed by the messages of its sources, separated by `: `,
-/// and the function returns exit status 2. Any standard error type, as well as `anyhow::Error`,
-/// can be passed directly.
+/// On error, logs the message and its causes separated by `: `, then returns exit status 2.
 pub fn exit_code<E: Into<Box<dyn Error>>>(result: Result<CommandOutcome, E>) -> ExitCode {
     match result {
         Ok(outcome) => outcome.into(),
@@ -97,8 +95,7 @@ pub fn interrupt_flag() -> &'static AtomicBool {
 
 /// A count followed by `noun`, with `s` appended unless the count is one.
 ///
-/// Use only with nouns whose plural is formed by adding `s`. Counts can use types such as `usize`
-/// and `u64` without conversion.
+/// Use only with nouns whose plural is formed by adding `s`.
 #[must_use]
 pub fn plural<N: Copy + Display + PartialEq + From<u8>>(count: N, noun: &str) -> String {
     let suffix = if count == N::from(1) { "" } else { "s" };

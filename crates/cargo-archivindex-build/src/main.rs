@@ -40,17 +40,6 @@ fn main() -> ExitCode {
     archivindex_cli_support::exit_code(run())
 }
 
-/// Run the selected command.
-///
-/// # Returns
-///
-/// [`CommandOutcome::ReportedProblems`] if the project violates the policy, and
-/// [`CommandOutcome::Success`] otherwise.
-///
-/// # Errors
-///
-/// Returns an error if the workspace metadata cannot be read, or a project file cannot be read,
-/// parsed, or written.
 fn run() -> Result<CommandOutcome, Error> {
     // Cargo passes the subcommand's own name through as the first argument.
     let mut arguments: Vec<_> = std::env::args_os().collect();

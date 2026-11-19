@@ -76,7 +76,6 @@ pub fn escape_host_into(output: &mut String, label: &[u8]) {
 fn escape_into(output: &mut String, text: &[u8], needs_escape: fn(u8) -> bool) {
     for &byte in text {
         if needs_escape(byte) {
-            // Writing to a `String` cannot fail, so the `std::fmt::Result` carries no information.
             let _ = write!(output, "%{byte:02x}");
         } else {
             output.push(char::from(byte));

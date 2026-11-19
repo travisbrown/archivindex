@@ -1,4 +1,4 @@
-//! Request preparation and redirect policy extracted from the WARC client.
+//! Request preparation and redirect behavior.
 use std::borrow::Cow;
 
 use archivindex_http_client::conditional::{Validators, request_field};

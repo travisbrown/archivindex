@@ -130,8 +130,7 @@ enum Ipv6Host {
 
 /// An absolute URL with an authority and a nonempty host, split into its components.
 ///
-/// Parsed URLs borrow their text from the input. Import [`IntoBoundedStatic`] and use
-/// [`into_static`](IntoBoundedStatic::into_static) to keep a URL after the input is dropped.
+/// Parsed URLs borrow their text from the input.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Url<'a> {
     text: Cow<'a, str>,
@@ -266,7 +265,6 @@ impl<'a> Url<'a> {
         }
 
         if let Some(port) = self.layout.port {
-            // Writing to a `String` cannot fail, so the `std::fmt::Result` carries no information.
             let _ = write!(key, ":{port}");
         }
 

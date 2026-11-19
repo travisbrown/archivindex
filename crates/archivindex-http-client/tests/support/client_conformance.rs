@@ -705,8 +705,7 @@ fn no_hidden_redirects_or_retries() {
     }
 }
 
-/// Clients are synchronous, and callers on an async runtime call them without `spawn_blocking`
-/// only if a fetch never blocks on that runtime from inside it.
+/// Synchronous fetches must also work when called from a Tokio runtime.
 #[test]
 fn a_fetch_works_inside_a_tokio_runtime() {
     let runtime = tokio::runtime::Builder::new_current_thread()

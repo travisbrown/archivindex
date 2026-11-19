@@ -53,13 +53,8 @@ pub fn target(target: &Uri) -> Cow<'_, Uri> {
 
 /// Copy `headers` with the fields every exchange needs, and without framing fields.
 ///
-/// A `host` field naming `authority`, which is that of the [`target`] to send, comes first, and
-/// `connection: close` comes last. Each is added only when the caller supplied no field of that
-/// name.
-///
-/// `transfer-encoding` and `content-length` fields are left out, because the body given to a fetch
-/// frames its request. A field that declared any other body would leave the origin waiting for
-/// bytes that are never sent.
+/// When absent, `host` is added first using `authority`, and `connection: close` is added last.
+/// Framing headers are omitted so the client can set them from the actual body length.
 pub fn headers(authority: &Authority, headers: &HeaderMap) -> HeaderMap {
     let mut prepared = HeaderMap::with_capacity(headers.len() + 2);
     if !headers.contains_key(header::HOST) {

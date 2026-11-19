@@ -1,4 +1,4 @@
-//! The string literals a challenge page's script states its data in.
+//! Parse string literals from challenge scripts.
 
 /// Parse a single- or double-quoted string literal, returning it and what follows its close.
 ///

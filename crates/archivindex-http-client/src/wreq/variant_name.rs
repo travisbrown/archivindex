@@ -1,4 +1,6 @@
-//! Recovery of the name a unit variant is serialized under.
+//! Recover profile names from their Serde representation so engine metadata uses the same names
+//! as configuration parsing. Debug output is not that contract; accepting only unit variants also
+//! prevents a changed profile representation from silently producing a misleading name.
 
 use serde::de::value::Error;
 use serde::ser::{Error as _, Impossible, Serialize, Serializer};

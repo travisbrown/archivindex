@@ -22,7 +22,6 @@ pub fn project(project: &Project) -> Result<Vec<Violation>, Error> {
 
     root(project, &root_document, &mut violations);
 
-    // Collect dependencies from all members once to check for unused workspace entries.
     let mut used = BTreeSet::new();
     for entry in &project.members {
         let document = read(&entry.manifest_path)?;

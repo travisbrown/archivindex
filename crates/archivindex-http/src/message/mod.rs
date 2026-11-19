@@ -1,8 +1,7 @@
 //! Parsed views of HTTP/1 messages.
 //!
-//! [`ResponseMetadata`] and [`RequestMetadata`] read a message's start line and field lines and
-//! locate its body. They leave the input bytes unchanged and borrow from them, copying a field
-//! value only to unfold its continuation lines.
+//! [`ResponseMetadata`] and [`RequestMetadata`] parse start lines and headers and locate the body.
+//! The input bytes are unchanged; parsed header values have continuation lines unfolded.
 //!
 //! A message head consists of the start line, header field lines, and terminating empty line.
 //! The header section contains the field lines alone.

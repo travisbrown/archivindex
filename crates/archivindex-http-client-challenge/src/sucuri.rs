@@ -1,8 +1,7 @@
 //! Recognition of Sucuri `CloudProxy`'s JavaScript cookie challenge.
 //!
-//! The challenge page carries a base64-encoded script that sets one cookie and reloads. The decoder
-//! below reads that script's cookie assignment under a grammar narrow enough that nothing else can
-//! be expressed in it: literals, character codes, and one variable.
+//! The challenge page carries a base64-encoded script that sets one cookie and reloads. Only
+//! literals, character codes, and one variable are accepted in the cookie assignment.
 
 use std::time::Instant;
 

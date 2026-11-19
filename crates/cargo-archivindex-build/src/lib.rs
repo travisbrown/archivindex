@@ -2,6 +2,24 @@
 //!
 //! [`check_project`] reports settings that do not follow the shared policy. [`sync_project`]
 //! applies automatic fixes, then reports anything that still needs attention.
+//!
+//! # Checking a workspace
+//!
+//! Policy violations are returned as [`Violation`] values. An [`Error`] means the workspace could
+//! not be loaded or a file could not be read, parsed, or written.
+//!
+//! ```no_run
+//! use cargo_archivindex_build::check_project;
+//!
+//! for violation in check_project(None)? {
+//!     eprintln!("{violation}");
+//! }
+//! # Ok::<(), cargo_archivindex_build::Error>(())
+//! ```
+//!
+//! Pass a manifest path to select another workspace. [`sync_project`] changes files and returns both
+//! the changed paths and any remaining violations in [`SyncReport`]. Neither function runs the
+//! formatters, lints, or dependency checks whose configuration it validates.
 
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};

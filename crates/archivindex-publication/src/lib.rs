@@ -1,21 +1,14 @@
 //! Publish complete files with explicit overwrite and durability guarantees.
 //!
-//! Writing an archive can take a long time, and the process may fail before the file is complete.
-//! This crate wraps [`tempfile`] to keep partial output separate from completed files. Temporary
-//! files have unique, dot-prefixed names by default; [`Publication::with_partial_path`] and
-//! [`Publication::with_partial_suffix`] let you choose a predictable name instead.
+//! Write to a [`Publication`] to keep unfinished output separate from the destination. Call
+//! [`publish`](Publication::publish) once writing is complete, after finishing encoders and
+//! flushing buffers. Publication synchronizes the file and moves it to the destination. On Unix,
+//! it also synchronizes the parent directory.
 //!
-//! A [`Publication`] owns a temporary file in the destination directory. By default, dropping an
-//! instance before publication removes that file on a best-effort basis, or you can use
-//! [`Publication::retain_partial`] to retain unfinished output. Neither behavior changes the
-//! destination. The destination is not reserved, and multiple instances may target the same path,
-//! with each instance's [`Policy`] determining what happens on publication in the case of
-//! collisions.
-//!
-//! Callers must finish encoders and flush any buffers before [`Publication::publish`], which
-//! synchronizes the file, persists it under the chosen policy, then synchronizes the parent
-//! directory on Unix (other platforms get the file sync and persistence operation, but no directory
-//! sync guarantee).
+//! [`Policy`] controls whether publication can replace an existing destination. The destination
+//! is not reserved while writing, so this policy also applies to files created in the meantime.
+//! Dropping an unpublished writer tries to delete its temporary file; use
+//! [`retain_partial`](Publication::retain_partial) to keep unfinished output.
 //!
 //! ```
 //! use std::io::Write;
@@ -90,9 +83,7 @@ impl Error {
     }
 }
 
-/// Preserve the stage and source for APIs that expose only I/O errors.
-///
-/// The original [`Error`] can be recovered with [`std::io::Error::get_ref`] and `downcast_ref`.
+/// Preserve the publication stage and underlying error when converting to an I/O error.
 impl From<Error> for std::io::Error {
     fn from(error: Error) -> Self {
         Self::new(error.source.kind(), error)
@@ -188,14 +179,14 @@ impl Publication {
 
     /// Retain the temporary file if this publication is dropped before it is published.
     ///
-    /// Call this before writing to keep partial output if you return early after an error or
-    /// cancellation, or unwind after a panic. The file also stays at its temporary path if
-    /// synchronization or the move to the destination fails. A successful move puts it at the
-    /// destination as usual.
+    /// Call this before writing to keep partial output after an error, cancellation, or panic.
+    /// The file also stays at its temporary path if file synchronization or the move fails.
     ///
     /// This disables automatic deletion; it does not flush external buffers, finish encoders, or
     /// synchronize the partial file. Retained output may be incomplete and is not guaranteed to
-    /// survive a system crash or power loss. Signal handling remains the caller's responsibility.
+    /// survive a system crash or power loss. To handle Ctrl-C, stop writing and drop the publication
+    /// without calling [`publish`](Self::publish). Abrupt process termination also leaves the file
+    /// behind. Creating another partial file at the same path fails without overwriting it.
     ///
     /// ```
     /// use std::io::Write;
@@ -255,6 +246,14 @@ impl Publication {
     ///
     /// The returned file is still open, but its cursor position is unspecified, so seek before
     /// reading. Callers must finish encoders and flush any external buffers before calling this.
+    /// Other platforms synchronize the file but provide no directory synchronization guarantee.
+    ///
+    /// # Errors
+    ///
+    /// Errors before the move leave any existing destination untouched. With
+    /// [`ErrorKind::DirectorySync`], the completed file is already at the destination, but its
+    /// survival after a system crash is not guaranteed. [`Error::is_published`] distinguishes this
+    /// case from failures before publication.
     pub fn publish(self) -> Result<File, Error> {
         self.publish_with(File::sync_all, sync_parent)
     }

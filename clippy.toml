@@ -1,0 +1,2 @@
+# The trailing ".." preserves Clippy's built-in list of accepted names.
+doc-valid-idents = ["BoringSSL", "CMake", ".."]

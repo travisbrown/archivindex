@@ -11,8 +11,6 @@
 //! Callers are responsible for choosing the hash algorithm and computing the digest bytes.
 //!
 //! ```
-//! use std::str::FromStr;
-//!
 //! struct CdxDigest;
 //!
 //! impl archivindex_digest::Format for CdxDigest {
@@ -79,8 +77,6 @@ pub enum Error {
 }
 
 /// Encode `bytes` as text using format `F`, including its prefix.
-///
-/// The digest is encoded directly into `writer`, without an intermediate `String`.
 ///
 /// # Errors
 ///

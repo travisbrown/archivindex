@@ -1,10 +1,7 @@
 //! Byte-exact capture of live HTTP exchanges.
 //!
-//! [`Recorder`] performs an HTTP/1.1 exchange over its own connection and returns the exact request
-//! and response bytes in [`Exchange`]. It serializes the request itself and records the
-//! response verbatim, parsing only enough to find the message boundary. This preserves chunked
-//! coding, header spelling, and the reason phrase, so a digest of a captured message covers bytes
-//! that crossed the wire.
+//! [`Recorder`] returns the exact HTTP/1.1 request and response bytes in [`Exchange`], preserving
+//! header spelling, reason phrases, chunk framing, and trailers.
 //!
 //! Each fetch opens one connection for one request and response. It does not follow redirects,
 //! decode content, or reuse the connection. It adds `host` when absent and defaults a missing

@@ -1,4 +1,4 @@
-//! Building a [`Entry`] from the text fields of an index entry.
+//! Parse an index entry from its text fields.
 
 use std::borrow::Cow;
 

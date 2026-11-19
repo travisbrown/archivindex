@@ -104,7 +104,6 @@ impl Canonicalizer {
             .port()
             .filter(|&port| default_port(&scheme) != Some(port))
         {
-            // Writing to a `String` cannot fail, so the `std::fmt::Result` carries no information.
             let _ = write!(text, ":{port}");
         }
 

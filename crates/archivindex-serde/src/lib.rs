@@ -3,6 +3,26 @@
 //! [`BorrowableStr`] deserializes strings by borrowing from the input when the deserializer
 //! supports it. The [`borrowable_str`] modules apply this behavior to optional strings and string
 //! sequences. [`from_str`] deserializes a string through a type's [`FromStr`] implementation.
+//!
+//! Use [`BorrowableStr`] directly in a model:
+//!
+//! ```
+//! use std::borrow::Cow;
+//! use archivindex_serde::BorrowableStr;
+//!
+//! #[derive(serde::Deserialize, serde::Serialize)]
+//! struct Record<'a> {
+//!     #[serde(borrow)]
+//!     name: BorrowableStr<'a>,
+//! }
+//!
+//! let record = serde_json::from_str::<Record<'_>>(r#"{"name":"plain"}"#)?;
+//! assert!(matches!(record.name.0, Cow::Borrowed("plain")));
+//! # Ok::<(), serde_json::Error>(())
+//! ```
+//!
+//! For existing `Option<Cow<str>>` and `Vec<Cow<str>>` fields, use the attributes shown in
+//! [`borrowable_str::option`] and [`borrowable_str::seq`].
 
 use std::borrow::Cow;
 use std::marker::PhantomData;
@@ -14,10 +34,8 @@ pub mod borrowable_str;
 
 /// A `Cow<str>` that borrows from the deserializer input when possible.
 ///
-/// Serde's default `Cow` deserialization always produces `Cow::Owned`, even when borrowing is
-/// possible. This wrapper borrows when the deserializer supports it. For JSON parsed from a string
-/// or byte slice, strings without escape sequences can borrow from the input. JSON deserialized
-/// from a reader requires owned strings.
+/// For JSON, unescaped strings borrow from the input when parsing a string or byte slice.
+/// Escaped strings and reader input produce owned values.
 ///
 /// Use it directly as a field or element type, or through [`borrowable_str::option`] and
 /// [`borrowable_str::seq`] for strings inside an `Option` or a `Vec`, where `#[serde(borrow)]`
