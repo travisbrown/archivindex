@@ -186,19 +186,7 @@ impl Client for Recorder {
         let clock = Instant::now();
 
         let stream = if let Some(proxy) = &self.proxy {
-            let stream = self.connect(&proxy.host, proxy.port, deadline)?;
-            stream.set_read_timeout(self.io_timeout)?;
-            stream.set_write_timeout(self.io_timeout)?;
-            let mut transport = Transport {
-                stream: Stream::Plain(stream),
-                io_timeout: self.io_timeout,
-                deadline,
-            };
-            proxy.tunnel(&mut transport, host, port)?;
-            let Stream::Plain(stream) = transport.stream else {
-                unreachable!("SOCKS negotiation uses a plain connection");
-            };
-            stream
+            self.connect(&proxy.host, proxy.port, deadline)?
         } else {
             self.connect(host, port, deadline)?
         };
@@ -207,20 +195,17 @@ impl Client for Recorder {
         } else {
             None
         };
-        stream.set_read_timeout(self.io_timeout)?;
-        stream.set_write_timeout(self.io_timeout)?;
+        let mut socket = Socket::new(stream, self.io_timeout, deadline)?;
+        if let Some(proxy) = &self.proxy {
+            proxy.tunnel(&mut socket, host, port)?;
+        }
 
-        let stream = if tls {
+        let mut transport = if tls {
             let server_name = ServerName::try_from(host.to_owned())?;
             let connection = rustls::ClientConnection::new(Arc::clone(&self.tls), server_name)?;
-            Stream::Tls(Box::new(rustls::StreamOwned::new(connection, stream)))
+            Stream::Tls(Box::new(rustls::StreamOwned::new(connection, socket)))
         } else {
-            Stream::Plain(stream)
-        };
-        let mut transport = Transport {
-            stream,
-            io_timeout: self.io_timeout,
-            deadline,
+            Stream::Plain(socket)
         };
 
         transport.write_all(&request)?;
@@ -283,21 +268,14 @@ fn bound(
 }
 
 enum Stream {
-    Plain(TcpStream),
-    Tls(Box<rustls::StreamOwned<rustls::ClientConnection, TcpStream>>),
+    Plain(Socket),
+    Tls(Box<rustls::StreamOwned<rustls::ClientConnection, Socket>>),
 }
 
-/// A connection whose every read and write is bounded by the I/O timeout and the deadline.
-struct Transport {
-    stream: Stream,
-    io_timeout: Option<Duration>,
-    deadline: Option<Instant>,
-}
-
-impl Transport {
+impl Stream {
     /// The TLS version the connection negotiated, when it uses TLS.
     fn tls_version(&self) -> Option<TlsVersion> {
-        let Stream::Tls(stream) = &self.stream else {
+        let Self::Tls(stream) = self else {
             return None;
         };
 
@@ -307,46 +285,80 @@ impl Transport {
             _ => None,
         }
     }
-
-    /// Bound the next socket operation by the time left to the deadline, when there is one.
-    fn arm(&self) -> std::io::Result<()> {
-        if self.deadline.is_none() {
-            return Ok(());
-        }
-        let timeout = bound(self.io_timeout, self.deadline)?;
-        let socket = match &self.stream {
-            Stream::Plain(stream) => stream,
-            Stream::Tls(stream) => &stream.sock,
-        };
-        socket.set_read_timeout(timeout)?;
-        socket.set_write_timeout(timeout)
-    }
 }
 
-impl Read for Transport {
+impl Read for Stream {
     fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
-        self.arm()?;
-        match &mut self.stream {
-            Stream::Plain(stream) => stream.read(buffer),
-            Stream::Tls(stream) => stream.read(buffer),
+        match self {
+            Self::Plain(stream) => stream.read(buffer),
+            Self::Tls(stream) => stream.read(buffer),
         }
     }
 }
 
-impl Write for Transport {
+impl Write for Stream {
     fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
-        self.arm()?;
-        match &mut self.stream {
-            Stream::Plain(stream) => stream.write(buffer),
-            Stream::Tls(stream) => stream.write(buffer),
+        match self {
+            Self::Plain(stream) => stream.write(buffer),
+            Self::Tls(stream) => stream.write(buffer),
         }
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        self.arm()?;
-        match &mut self.stream {
-            Stream::Plain(stream) => stream.flush(),
-            Stream::Tls(stream) => stream.flush(),
+        match self {
+            Self::Plain(stream) => stream.flush(),
+            Self::Tls(stream) => stream.flush(),
         }
+    }
+}
+
+/// Enforce deadlines beneath TLS, which may perform several socket operations in one call.
+struct Socket {
+    stream: TcpStream,
+    io_timeout: Option<Duration>,
+    deadline: Option<Instant>,
+}
+
+impl Socket {
+    fn new(
+        stream: TcpStream,
+        io_timeout: Option<Duration>,
+        deadline: Option<Instant>,
+    ) -> std::io::Result<Self> {
+        stream.set_read_timeout(io_timeout)?;
+        stream.set_write_timeout(io_timeout)?;
+        Ok(Self {
+            stream,
+            io_timeout,
+            deadline,
+        })
+    }
+
+    fn arm(&self) -> std::io::Result<()> {
+        if self.deadline.is_some() {
+            let timeout = bound(self.io_timeout, self.deadline)?;
+            self.stream.set_read_timeout(timeout)?;
+            self.stream.set_write_timeout(timeout)?;
+        }
+        Ok(())
+    }
+}
+
+impl Read for Socket {
+    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+        self.arm()?;
+        self.stream.read(buffer)
+    }
+}
+
+impl Write for Socket {
+    fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
+        self.arm()?;
+        self.stream.write(buffer)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.arm()?;
+        self.stream.flush()
     }
 }
