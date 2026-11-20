@@ -79,15 +79,11 @@ pub fn from_fields<'a, 'f>(
     let timestamp = timestamp
         .parse()
         .map_err(|_| invalid("timestamp", &timestamp))?;
-    let length = parse_length(values.original_length.as_deref(), "orig.length")?;
-    let offset = parse_optional(values.original_offset.as_deref(), "orig.offset")?;
-    let filename = optional_value(values.original_filename);
-    let original =
-        (length.is_some() || offset.is_some() || filename.is_some()).then_some(Location {
-            length,
-            offset,
-            filename,
-        });
+    let original = original_location(
+        values.original_length.as_deref(),
+        values.original_offset.as_deref(),
+        values.original_filename,
+    )?;
 
     Ok(Entry {
         key,
@@ -105,6 +101,70 @@ pub fn from_fields<'a, 'f>(
         original,
         extra: values.extra,
     })
+}
+
+/// Normalize CDXJ extension fields using the same rules as the text formats.
+pub fn from_cdxj(mut entry: crate::format::cdxj::Entry<'_>) -> Result<Entry<'_>, Error> {
+    let extra = &mut entry.fields.extra;
+    let redirect = optional_value(take_property(extra, "redirect")?);
+    let robot_flags = take_property(extra, "robotflags")?;
+    let meta = take_property(extra, "meta")?;
+    let original = original_location(
+        take_property(extra, "orig.length")?.as_deref(),
+        take_property(extra, "orig.offset")?.as_deref(),
+        take_property(extra, "orig.filename")?,
+    )?;
+
+    Ok(Entry {
+        key: entry.key,
+        timestamp: entry.timestamp,
+        url: entry.fields.url,
+        mime: entry.fields.mime,
+        status: entry.fields.status,
+        digest: entry.fields.digest,
+        redirect,
+        robot_flags: optional_value(robot_flags.or(meta)),
+        length: entry.fields.length,
+        offset: entry.fields.offset,
+        filename: entry.fields.filename,
+        record_digest: entry.fields.record_digest,
+        original,
+        extra: entry.fields.extra,
+    })
+}
+
+fn take_property(
+    extra: &mut ExtraProperties,
+    name: &'static str,
+) -> Result<Option<Cow<'static, str>>, Error> {
+    match extra.shift_remove(name) {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(serde_json::Value::String(value)) => Ok(Some(Cow::Owned(value))),
+        Some(serde_json::Value::Number(value))
+            if matches!(name, "orig.length" | "orig.offset")
+                && (value.is_i64() || value.is_u64()) =>
+        {
+            Ok(Some(Cow::Owned(value.to_string())))
+        }
+        Some(value) => Err(invalid(name, &value.to_string())),
+    }
+}
+
+fn original_location<'a>(
+    length: Option<&str>,
+    offset: Option<&str>,
+    filename: Option<Cow<'a, str>>,
+) -> Result<Option<Location<'a>>, Error> {
+    let length = parse_length(length, "orig.length")?;
+    let offset = parse_optional(offset, "orig.offset")?;
+    let filename = optional_value(filename);
+    Ok(
+        (length.is_some() || offset.is_some() || filename.is_some()).then_some(Location {
+            length,
+            offset,
+            filename,
+        }),
+    )
 }
 
 fn required_value<'a>(

@@ -30,7 +30,11 @@ pub enum Error {
 
 /// A CDXJ entry consisting of a key, timestamp, and JSON field object.
 ///
-/// Convert to [`crate::Entry`] to work with the shared model across CDX formats.
+/// Use [`crate::Entry::try_from`] to work with the shared model across CDX formats. This
+/// conversion validates `redirect`, `robotflags` (or `meta`), and `orig.*` properties and moves
+/// them from [`Fields::extra`] into the shared fields. Null and `-` values are treated as absent;
+/// negative original lengths are also absent. Original lengths and offsets accept integer JSON
+/// numbers or decimal strings. Other properties retain their JSON values.
 ///
 /// By default, [`Entry`] uses [`Fields`], which allows standard fields to be missing.
 /// Use [`ConformingEntry`] to require all seven mandatory CDXJ 0.1.0 fields. In both cases,
@@ -430,24 +434,11 @@ impl<'a> TryFrom<&Fields<'a>> for ConformingFields<'a> {
     }
 }
 
-impl<'a> From<Entry<'a>> for crate::Entry<'a> {
-    fn from(entry: Entry<'a>) -> Self {
-        Self {
-            key: entry.key,
-            timestamp: entry.timestamp,
-            url: entry.fields.url,
-            mime: entry.fields.mime,
-            status: entry.fields.status,
-            digest: entry.fields.digest,
-            redirect: None,
-            robot_flags: None,
-            length: entry.fields.length,
-            offset: entry.fields.offset,
-            filename: entry.fields.filename,
-            record_digest: entry.fields.record_digest,
-            original: None,
-            extra: entry.fields.extra,
-        }
+impl<'a> TryFrom<Entry<'a>> for crate::Entry<'a> {
+    type Error = crate::field::Error;
+
+    fn try_from(entry: Entry<'a>) -> Result<Self, Self::Error> {
+        crate::entry::from_cdxj(entry)
     }
 }
 
@@ -688,7 +679,7 @@ mod tests {
         assert_eq!(conforming.key, entry.key);
         assert_eq!(conforming.fields.status(), 200);
 
-        let entry = crate::Entry::from(entry);
+        let entry = crate::Entry::try_from(entry)?;
         assert_eq!(entry.key, "com,example)/");
         assert_eq!(entry.url, "https://example.com/");
         assert_eq!(entry.status, Some(200));

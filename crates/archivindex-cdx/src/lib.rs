@@ -19,7 +19,8 @@
 //!     r#"com,example)/ 20201007212236 {"url":"https://example.com/","status":"200"}"#,
 //! )?;
 //! assert_eq!(entry.key, "com,example)/");
-//! assert_eq!(entry.fields.status, Some(200));
+//! let entry = archivindex_cdx::Entry::try_from(entry)?;
+//! assert_eq!(entry.status, Some(200));
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
