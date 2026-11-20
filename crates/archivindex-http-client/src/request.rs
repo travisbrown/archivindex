@@ -18,6 +18,11 @@ pub fn validate(target: &Uri, deadline: Option<Instant>) -> Result<fluent_uri::U
     }
     // `http::Uri` accepts targets that are not RFC 3986 URIs.
     let target_uri = fluent_uri::Uri::parse(target.to_string().as_str())?.to_owned();
+    if let Some(authority) = target_uri.authority() {
+        authority
+            .port_to_u16()
+            .map_err(|_| url::ParseError::InvalidPort)?;
+    }
     if deadline.is_some_and(|end| end <= Instant::now()) {
         return Err(std::io::Error::new(
             std::io::ErrorKind::TimedOut,
@@ -74,4 +79,21 @@ pub fn headers(authority: &Authority, headers: &HeaderMap) -> HeaderMap {
     }
 
     prepared
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn valid_explicit_empty_and_default_ports_are_accepted() {
+        for scheme in ["http", "https"] {
+            for authority in ["example.com", "user:pass@example.com", "[::1]"] {
+                for port in ["", ":", ":0", ":80", ":443", ":00080", ":65535"] {
+                    let target: Uri = format!("{scheme}://{authority}{port}/").parse().unwrap();
+                    assert!(validate(&target, None).is_ok(), "{target}");
+                }
+            }
+        }
+    }
 }

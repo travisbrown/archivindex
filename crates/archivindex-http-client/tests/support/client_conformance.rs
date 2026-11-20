@@ -480,6 +480,33 @@ fn a_target_that_is_not_a_uri_fails_before_connecting() {
     );
 }
 
+/// Reject explicit ports outside the TCP range before contacting either an origin or a proxy.
+#[test]
+fn an_out_of_range_port_fails_before_connecting() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("a loopback listener");
+    listener.set_nonblocking(true).unwrap();
+    let proxy = format!("socks5h://{}", listener.local_addr().unwrap());
+
+    for scheme in ["http", "https"] {
+        for authority in ["127.0.0.1", "user:pass@127.0.0.1", "[::1]"] {
+            for port in ["65536", "999999999999999999999999999999999999"] {
+                let target: Uri = format!("{scheme}://{authority}:{port}/").parse().unwrap();
+                for proxy in [None, Some(proxy.as_str())] {
+                    let result = client().proxy(proxy).unwrap().fetch(get(&target));
+                    assert!(
+                        matches!(result, Err(Error::InvalidUrl(url::ParseError::InvalidPort))),
+                        "{target}: {result:?}"
+                    );
+                }
+            }
+        }
+    }
+    assert_eq!(
+        listener.accept().expect_err("no proxy connection").kind(),
+        ErrorKind::WouldBlock
+    );
+}
+
 #[test]
 fn captures_the_messages_inside_tls_and_reports_its_version() {
     let response: &[u8] = b"HTTP/1.1 200 OK\r\ncontent-length: 7\r\nx-secure: yes\r\n\r\nsecrets";
