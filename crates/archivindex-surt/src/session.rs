@@ -12,24 +12,39 @@ use std::borrow::Cow;
 /// A matcher returning the length of a session identifier at the start of its input.
 type Pattern = fn(&[u8]) -> Option<usize>;
 
+/// Find the range to remove, including a following query separator.
+type QueryPattern = fn(&[u8]) -> Option<(usize, usize)>;
+
 /// Remove session identifiers from a query (without its leading `?`).
 ///
 /// Each pattern is applied once, at its rightmost match, in the order `jsessionid`, `phpsessid`,
 /// `sid`, `ASPSESSIONID`, `cfid`/`cftoken`. A match must run to the end of the query or up to an
 /// `&`, and that `&` is removed with it.
 pub fn strip_query(query: &str) -> Cow<'_, str> {
-    const PATTERNS: [Pattern; 5] = [
-        |rest| session_value(rest, b"jsessionid=", 32, u8::is_ascii_alphanumeric),
-        |rest| session_value(rest, b"phpsessid=", 32, u8::is_ascii_alphanumeric),
-        |rest| session_value(rest, b"sid=", 32, u8::is_ascii_alphanumeric),
-        asp_session,
+    const PATTERNS: [QueryPattern; 5] = [
+        |query| {
+            rightmost_query_match(query, |rest| {
+                session_value(rest, b"jsessionid=", 32, u8::is_ascii_alphanumeric)
+            })
+        },
+        |query| {
+            rightmost_query_match(query, |rest| {
+                session_value(rest, b"phpsessid=", 32, u8::is_ascii_alphanumeric)
+            })
+        },
+        |query| {
+            rightmost_query_match(query, |rest| {
+                session_value(rest, b"sid=", 32, u8::is_ascii_alphanumeric)
+            })
+        },
+        |query| rightmost_query_match(query, asp_session),
         coldfusion_session,
     ];
 
     let mut query = Cow::Borrowed(query);
 
     for pattern in PATTERNS {
-        if let Some((start, end)) = rightmost_query_match(query.as_bytes(), pattern) {
+        if let Some((start, end)) = pattern(query.as_bytes()) {
             let mut stripped = String::with_capacity(query.len());
             stripped.push_str(&query[..start]);
             stripped.push_str(&query[end..]);
@@ -43,10 +58,7 @@ pub fn strip_query(query: &str) -> Cow<'_, str> {
 /// Find the rightmost position where `pattern` matches and is followed by `&` or the end.
 ///
 /// Returns the byte range to remove, including a following `&`.
-fn rightmost_query_match(
-    query: &[u8],
-    pattern: fn(&[u8]) -> Option<usize>,
-) -> Option<(usize, usize)> {
+fn rightmost_query_match(query: &[u8], pattern: Pattern) -> Option<(usize, usize)> {
     (0..query.len()).rev().find_map(|start| {
         let end = start + pattern(&query[start..])?;
 
@@ -79,23 +91,30 @@ fn asp_session(rest: &[u8]) -> Option<usize> {
     .then_some(KEY.len() + 33)
 }
 
-/// Match `cfid=<value>&cftoken=<value>` with non-empty values.
-fn coldfusion_session(rest: &[u8]) -> Option<usize> {
-    let cfid_len = key_and_value(rest, b"cfid=")?;
-    let token_len = key_and_value(&rest[cfid_len..], b"&cftoken=")?;
+/// Find the rightmost `cfid=<value>&cftoken=<value>` with nonempty values.
+///
+/// Scan each parameter once. Trying the variable-length matcher at every byte would repeatedly
+/// scan the same suffix, even for a query with no session identifiers.
+fn coldfusion_session(query: &[u8]) -> Option<(usize, usize)> {
+    let mut end = query.len();
+    let mut token_end = None;
 
-    Some(cfid_len + token_len)
-}
+    for field in query.rsplit(|&byte| byte == b'&') {
+        let start = end - field.len();
+        if let Some(token_end) = token_end
+            && let Some(index) = field
+                .windows(6)
+                .rposition(|text| text[..5].eq_ignore_ascii_case(b"cfid="))
+        {
+            return Some((start + index, token_end));
+        }
 
-/// Match `key` (case-insensitively) followed by one or more bytes other than `&`.
-fn key_and_value(rest: &[u8], key: &[u8]) -> Option<usize> {
-    let prefix = rest.get(..key.len())?;
-    let value_len = rest[key.len()..]
-        .iter()
-        .take_while(|&&byte| byte != b'&')
-        .count();
+        token_end = (field.len() > 8 && field[..8].eq_ignore_ascii_case(b"cftoken="))
+            .then_some((end + 1).min(query.len()));
+        end = start.saturating_sub(1);
+    }
 
-    (prefix.eq_ignore_ascii_case(key) && value_len > 0).then_some(key.len() + value_len)
+    None
 }
 
 /// Remove ASP.NET cookieless session identifiers from a path.
@@ -119,10 +138,7 @@ pub fn strip_path(path: &str) -> Cow<'_, str> {
 
 /// Find the rightmost segment start (just after a `/`) where `pattern` matches a session segment
 /// ending in `/`, with an `.aspx` resource somewhere after it.
-fn rightmost_path_match(
-    path: &[u8],
-    pattern: fn(&[u8]) -> Option<usize>,
-) -> Option<(usize, usize)> {
+fn rightmost_path_match(path: &[u8], pattern: Pattern) -> Option<(usize, usize)> {
     (1..=path.len())
         .rev()
         .filter(|&start| path[start - 1] == b'/')
@@ -208,6 +224,34 @@ mod tests {
             strip_query(&format!("jsessionid={SESSION_32}x&a=1")),
             format!("jsessionid={SESSION_32}x&a=1")
         );
+    }
+
+    /// `ColdFusion` values have no fixed length, and a key can start inside another parameter.
+    #[test]
+    fn coldfusion_matches_preserve_boundaries_and_choose_the_rightmost_key() {
+        for (query, expected) in [
+            ("cfid=&cftoken=x", "cfid=&cftoken=x"),
+            ("cfid=x&cftoken=", "cfid=x&cftoken="),
+            ("cfid=x&other=y&cftoken=z", "cfid=x&other=y&cftoken=z"),
+            ("prefixCFID=x&CFTOKEN=y&tail", "prefixtail"),
+            ("cfid=x&cftoken=y&cfid=z&cftoken=w", "cfid=x&cftoken=y&"),
+            ("cfid=cfid=x&cftoken=y", "cfid="),
+            ("cfid=cfid=&cftoken=y", ""),
+            ("é=cfid=値&cftoken=値&last", "é=last"),
+        ] {
+            assert_eq!(strip_query(query), expected, "{query}");
+        }
+    }
+
+    /// Large values, including repeated candidate prefixes, must not rescan every suffix.
+    #[test]
+    fn long_queries_with_missing_or_repeated_session_prefixes() {
+        for size in [10_000, 100_000, 1_000_000] {
+            for unit in ["a", "cfid="] {
+                let query = unit.repeat(size / unit.len());
+                assert_eq!(strip_query(&query), query);
+            }
+        }
     }
 
     #[test]
