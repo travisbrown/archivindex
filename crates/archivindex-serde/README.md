@@ -9,7 +9,7 @@ This is useful for parsing many records without allocating every text field.
 A separate helper connects string deserialization to a type's `FromStr` implementation, with
 errors that describe the expected value.
 
-See the [Rustdoc reference](../../README.md#documentation) for field attributes and examples.
+See the [Rustdoc reference](https://docs.rs/archivindex-serde) for field attributes and examples.
 
 ## License
 

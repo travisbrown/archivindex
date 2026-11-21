@@ -13,18 +13,26 @@ scope and license before integrating it.
 
 ## Crates
 
+These libraries are published on crates.io:
+
+| Crate                                                        | Description                                                                 | API docs                                           |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------- | -------------------------------------------------- |
+| [`archivindex-cdx`](crates/archivindex-cdx/)                 | Data models for [CDX][cdx], [CDXJ][cdxj], and [other variants][wayback-cdx] | [docs.rs](https://docs.rs/archivindex-cdx)         |
+| [`archivindex-digest`](crates/archivindex-digest/)           | Encode and decode fixed-size digests as text                                | [docs.rs](https://docs.rs/archivindex-digest)      |
+| [`archivindex-http`](crates/archivindex-http/)               | HTTP/1 message parsing and body extraction                                  | [docs.rs](https://docs.rs/archivindex-http)        |
+| [`archivindex-lines`](crates/archivindex-lines/)             | Read lines with size limits and source locations for errors                 | [docs.rs](https://docs.rs/archivindex-lines)       |
+| [`archivindex-publication`](crates/archivindex-publication/) | Publish files with control over overwriting and partial output              | [docs.rs](https://docs.rs/archivindex-publication) |
+| [`archivindex-serde`](crates/archivindex-serde/)             | String deserialization, borrowing, and `FromStr` helpers                    | [docs.rs](https://docs.rs/archivindex-serde)       |
+| [`archivindex-surt`](crates/archivindex-surt/)               | [SURT][surt] keys and URL canonicalization for web archives                 | [docs.rs](https://docs.rs/archivindex-surt)        |
+
+The remaining crates are not published. They support development of this workspace and the other
+Archivindex repositories.
+
 | Crate                                                                            | Description                                                                      |
 | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| [`archivindex-cdx`](crates/archivindex-cdx/)                                     | Data models for [CDX][cdx], [CDXJ][cdxj], and [other variants][wayback-cdx]      |
 | [`archivindex-cli-support`](crates/archivindex-cli-support/)                     | Command-line options, configuration, logging, progress, etc.                     |
-| [`archivindex-digest`](crates/archivindex-digest/)                               | Encode and decode fixed-size digests as text                                     |
-| [`archivindex-http`](crates/archivindex-http/)                                   | HTTP/1 message parsing and body extraction                                       |
 | [`archivindex-http-client`](crates/archivindex-http-client/)                     | HTTP clients that capture request and response messages                          |
 | [`archivindex-http-client-challenge`](crates/archivindex-http-client-challenge/) | Support for HTTP challenges                                                      |
-| [`archivindex-lines`](crates/archivindex-lines/)                                 | Read lines with size limits and source locations for errors                      |
-| [`archivindex-publication`](crates/archivindex-publication/)                     | Publish files with control over overwriting and partial output                   |
-| [`archivindex-serde`](crates/archivindex-serde/)                                 | String deserialization, borrowing, and `FromStr` helpers                         |
-| [`archivindex-surt`](crates/archivindex-surt/)                                   | [SURT][surt] keys and URL canonicalization for web archives                      |
 | [`archivindex-test-support`](crates/archivindex-test-support/)                   | Test fixtures, property-testing strategies, and [`wiremock`][wiremock] utilities |
 | [`cargo-archivindex-build`](crates/cargo-archivindex-build/)                     | Workspace policy checks and configuration synchronization                        |
 
@@ -62,8 +70,9 @@ cargo test --locked --workspace --all-features
 
 ## Documentation
 
-Each crate's Rustdoc contains API usage, examples, and behavior guarantees. Build the complete
-reference locally with:
+Each crate's Rustdoc contains API usage, examples, and behavior guarantees. The published crates'
+documentation is on docs.rs, linked from the table above. Build the complete reference, including
+the unpublished crates, locally with:
 
 ```console
 RUSTDOCFLAGS="-D warnings" cargo doc --locked --workspace --all-features --no-deps

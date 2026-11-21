@@ -13,8 +13,8 @@ visible. These guarantees complement the temporary-file handling supplied by `te
 The caller remains responsible for finishing encoders, flushing external buffers, and handling
 interrupts. Retaining a partial file alone does not make it durable across a crash.
 
-See the [Rustdoc reference](../../README.md#documentation) for examples, overwrite policies, and
-failure handling.
+See the [Rustdoc reference](https://docs.rs/archivindex-publication) for examples, overwrite
+policies, and failure handling.
 
 ## License
 

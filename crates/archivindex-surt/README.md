@@ -22,7 +22,7 @@ canonicalization policy.
 | `fluent-uri` | yes     | Convert to and from `fluent_uri::Uri` |
 | `url`        | no      | Convert to and from `url::Url`        |
 
-See the [Rustdoc reference](../../README.md#documentation) for parsing keys and configuring
+See the [Rustdoc reference](https://docs.rs/archivindex-surt) for parsing keys and configuring
 canonicalization.
 
 ## License

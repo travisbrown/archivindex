@@ -14,7 +14,7 @@ mandatory fields of the CDXJ specification.
 [`archivindex-lines`](../archivindex-lines/) provides bounded line reading and error locations.
 This crate supplies the record models rather than file storage or index searching.
 
-See the [Rustdoc reference](../../README.md#documentation) for parsing, validation, and conversion
+See the [Rustdoc reference](https://docs.rs/archivindex-cdx) for parsing, validation, and conversion
 examples.
 
 ## License

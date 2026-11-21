@@ -14,7 +14,7 @@ or decompress content. For live capture, use
 [`archivindex-http-client`](../archivindex-http-client/), which applies transport limits and records
 complete or truncated exchanges.
 
-See the [Rustdoc reference](../../README.md#documentation) for parsing examples and framing
+See the [Rustdoc reference](https://docs.rs/archivindex-http) for parsing examples and framing
 policies.
 
 ## License

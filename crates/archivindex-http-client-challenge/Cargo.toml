@@ -8,7 +8,6 @@ rust-version = "1.100"
 license = "GPL-3.0-only"
 readme = "README.md"
 repository.workspace = true
-documentation = "https://docs.rs/archivindex-http-client-challenge"
 keywords = ["http", "client", "challenge", "archive"]
 categories = ["web-programming::http-client"]
 # The HTTP client dependency is not yet published.

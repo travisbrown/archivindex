@@ -10,7 +10,7 @@ It adds source-aware diagnostics, blank-line handling, and size limits to a buff
 The caller supplies the record parser, for example the models in
 [`archivindex-cdx`](../archivindex-cdx/).
 
-See the [Rustdoc reference](../../README.md#documentation) for line-reading and error-reporting
+See the [Rustdoc reference](https://docs.rs/archivindex-lines) for line-reading and error-reporting
 examples.
 
 ## License

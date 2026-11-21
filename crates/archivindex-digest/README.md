@@ -10,8 +10,8 @@ such as uppercase hexadecimal input with lowercase output.
 Applications define their own formats and compute digest bytes with their chosen hashing library.
 The encoding layer uses `data-encoding` and can write directly to a text formatter.
 
-See the [Rustdoc reference](../../README.md#documentation) for defining a format and encoding or
-decoding digests.
+See the [Rustdoc reference](https://docs.rs/archivindex-digest) for defining a format and encoding
+or decoding digests.
 
 ## License
 
