@@ -3,7 +3,6 @@
 ![GitHub last commit][last-commit-badge]
 [![build][build-badge]][build]
 [![codecov][codecov-badge]][codecov]
-[![License: MIT OR Apache-2.0][license-badge]](#license)
 
 This repository contains data models and support crates shared by Archivindex's web archiving and
 indexing tools.
@@ -104,7 +103,6 @@ the [Apache License, Version 2.0][apache-2.0], at your option; see [LICENSE-MIT]
 [gpl-3.0]: https://www.gnu.org/licenses/gpl-3.0.html
 [last-commit-badge]: https://img.shields.io/github/last-commit/travisbrown/archivindex
 [license-apache]: LICENSE-APACHE
-[license-badge]: https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue
 [license-mit]: LICENSE-MIT
 [mit]: https://opensource.org/license/mit
 [surt]: http://crawler.archive.org/articles/user_manual/glossary.html#surt
