@@ -26,7 +26,7 @@ pub fn bare_text() -> impl Strategy<Value = String> {
     tokens_of(TOKENS, 1..=8)
 }
 
-/// Text other than `-`, for a field that must be present.
+/// Text other than `-`, for a value that must not read as absent.
 pub fn present_text() -> impl Strategy<Value = String> {
     bare_text().prop_filter("value is present", |value| value != ABSENT)
 }
@@ -92,13 +92,13 @@ pub fn extra_properties() -> impl Strategy<Value = ExtraProperties> {
 pub fn fields() -> impl Strategy<Value = Fields<'static>> {
     (
         json_text(),
-        proptest::option::of(bare_text()),
+        proptest::option::of(present_text()),
         proptest::option::of(json_text()),
         proptest::option::of(any::<u16>()),
         proptest::option::of(any::<u64>()),
         proptest::option::of(any::<u64>()),
         proptest::option::of(json_text()),
-        proptest::option::of(bare_text()),
+        proptest::option::of(present_text()),
         extra_properties(),
     )
         .prop_map(
@@ -120,13 +120,13 @@ pub fn fields() -> impl Strategy<Value = Fields<'static>> {
 pub fn conforming_fields() -> impl Strategy<Value = ConformingFields<'static>> {
     (
         json_text(),
-        bare_text(),
+        present_text(),
         json_text(),
         any::<u16>(),
         any::<u64>(),
         any::<u64>(),
         json_text(),
-        proptest::option::of(bare_text()),
+        proptest::option::of(present_text()),
         extra_properties(),
     )
         .prop_map(

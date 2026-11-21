@@ -107,8 +107,8 @@ pub fn from_fields<'a, 'f>(
 pub fn from_cdxj(mut entry: crate::format::cdxj::Entry<'_>) -> Result<Entry<'_>, Error> {
     let extra = &mut entry.fields.extra;
     let redirect = optional_value(take_property(extra, "redirect")?);
-    let robot_flags = take_property(extra, "robotflags")?;
-    let meta = take_property(extra, "meta")?;
+    let robot_flags = optional_value(take_property(extra, "robotflags")?);
+    let meta = optional_value(take_property(extra, "meta")?);
     let original = original_location(
         take_property(extra, "orig.length")?.as_deref(),
         take_property(extra, "orig.offset")?.as_deref(),
@@ -123,7 +123,7 @@ pub fn from_cdxj(mut entry: crate::format::cdxj::Entry<'_>) -> Result<Entry<'_>,
         status: entry.fields.status,
         digest: entry.fields.digest,
         redirect,
-        robot_flags: optional_value(robot_flags.or(meta)),
+        robot_flags: robot_flags.or(meta),
         length: entry.fields.length,
         offset: entry.fields.offset,
         filename: entry.fields.filename,

@@ -80,6 +80,29 @@ fn absent_metadata_and_unknown_json_properties_are_preserved() {
 }
 
 #[test]
+fn formats_agree_on_placeholders_in_standard_fields() {
+    let header = classic::Header::parse("CDX N b a m s k M S V g").unwrap();
+    let classic = header
+        .parse_entry("com,example)/ 20201007212236 https://example.com/ - - - - - - -")
+        .unwrap();
+    let expected = header.decode(&classic).unwrap();
+    let entry: cdxj::Entry<'_> = concat!(
+        r#"com,example)/ 20201007212236 {"url":"https://example.com/","mime":"-","#,
+        r#""status":"-","digest":"-","robotflags":"-","length":"-","offset":"-","#,
+        r#""filename":"-","recordDigest":"-"}"#,
+    )
+    .parse()
+    .unwrap();
+    assert_eq!(Entry::try_from(entry).unwrap(), expected);
+}
+
+#[test]
+fn a_robotflags_placeholder_does_not_hide_meta() {
+    let entry = Entry::try_from(cdxj_entry(json!({"robotflags": "-", "meta": "A"}))).unwrap();
+    assert_eq!(entry.robot_flags.as_deref(), Some("A"));
+}
+
+#[test]
 fn partial_revisit_locations_and_integer_limits_survive_conversion() {
     let entry = Entry::try_from(cdxj_entry(json!({"orig.filename": "data.warc"}))).unwrap();
     let original = entry.original.unwrap();

@@ -15,6 +15,7 @@ pub mod cdxj;
 pub mod classic;
 pub mod json;
 
+use std::borrow::Cow;
 use std::fmt::Display;
 use std::marker::PhantomData;
 use std::str::FromStr;
@@ -22,6 +23,17 @@ use std::str::FromStr;
 use serde::de::{Deserializer, Unexpected, Visitor};
 use serde::ser::Serializer;
 
+/// Deserialize an optional string, reading `-` as absent.
+pub(crate) fn optional_text<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<Cow<'de, str>>, D::Error> {
+    Ok(
+        archivindex_serde::borrowable_str::option::deserialize(deserializer)?
+            .filter(|value| value != "-"),
+    )
+}
+
+/// Deserialize an optional integer from a number or a decimal string, reading `-` as absent.
 pub(crate) fn optional_integer<'de, D: Deserializer<'de>, T: TryFrom<u64> + FromStr>(
     deserializer: D,
 ) -> Result<Option<T>, D::Error> {
@@ -31,7 +43,7 @@ pub(crate) fn optional_integer<'de, D: Deserializer<'de>, T: TryFrom<u64> + From
         type Value = Option<T>;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            formatter.write_str("unsigned integer or unsigned integer string")
+            formatter.write_str("unsigned integer, unsigned integer string, or \"-\"")
         }
 
         fn visit_u64<E: serde::de::Error>(self, value: u64) -> Result<Self::Value, E> {
@@ -41,10 +53,13 @@ pub(crate) fn optional_integer<'de, D: Deserializer<'de>, T: TryFrom<u64> + From
         }
 
         fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Self::Value, E> {
-            value
-                .parse()
-                .map(Some)
-                .map_err(|_| E::invalid_value(Unexpected::Str(value), &"unsigned integer string"))
+            if value == "-" {
+                Ok(None)
+            } else {
+                value.parse().map(Some).map_err(|_| {
+                    E::invalid_value(Unexpected::Str(value), &"unsigned integer string")
+                })
+            }
         }
 
         fn visit_none<E: serde::de::Error>(self) -> Result<Self::Value, E> {

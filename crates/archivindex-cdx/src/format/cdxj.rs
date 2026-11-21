@@ -33,7 +33,7 @@ pub enum Error {
 /// Use [`crate::Entry::try_from`] to work with the shared model across CDX formats. This
 /// conversion validates `redirect`, `robotflags` (or `meta`), and `orig.*` properties and moves
 /// them from [`Fields::extra`] into the shared fields. Null and `-` values are treated as absent;
-/// negative original lengths are also absent. Original lengths and offsets accept integer JSON
+/// negative original lengths are also absent. `robotflags` takes precedence over `meta`. Original lengths and offsets accept integer JSON
 /// numbers or decimal strings. Other properties retain their JSON values.
 ///
 /// By default, [`Entry`] uses [`Fields`], which allows standard fields to be missing.
@@ -149,7 +149,8 @@ impl<'a> TryFrom<&Entry<'a>> for ConformingEntry<'a> {
 /// The JSON object in a CDXJ entry, allowing standard fields to be missing.
 ///
 /// Numeric fields accept JSON numbers and decimal strings. They are written as strings to match
-/// common CDXJ indexers. Unrecognized properties are preserved.
+/// common CDXJ indexers. A `-` value for an optional standard field is read as absent, as in classic
+/// CDX. Unrecognized properties are preserved.
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct Fields<'a> {
     /// The original URL.
@@ -158,14 +159,16 @@ pub struct Fields<'a> {
     /// The response payload digest.
     #[serde(
         default,
-        with = "archivindex_serde::borrowable_str::option",
+        deserialize_with = "crate::format::optional_text",
+        serialize_with = "archivindex_serde::borrowable_str::option::serialize",
         skip_serializing_if = "Option::is_none"
     )]
     pub digest: Option<Cow<'a, str>>,
     /// The response media type.
     #[serde(
         default,
-        with = "archivindex_serde::borrowable_str::option",
+        deserialize_with = "crate::format::optional_text",
+        serialize_with = "archivindex_serde::borrowable_str::option::serialize",
         skip_serializing_if = "Option::is_none"
     )]
     pub mime: Option<Cow<'a, str>>,
@@ -196,7 +199,8 @@ pub struct Fields<'a> {
     /// The WARC filename.
     #[serde(
         default,
-        with = "archivindex_serde::borrowable_str::option",
+        deserialize_with = "crate::format::optional_text",
+        serialize_with = "archivindex_serde::borrowable_str::option::serialize",
         skip_serializing_if = "Option::is_none"
     )]
     pub filename: Option<Cow<'a, str>>,
@@ -204,7 +208,8 @@ pub struct Fields<'a> {
     #[serde(
         rename = "recordDigest",
         default,
-        with = "archivindex_serde::borrowable_str::option",
+        deserialize_with = "crate::format::optional_text",
+        serialize_with = "archivindex_serde::borrowable_str::option::serialize",
         skip_serializing_if = "Option::is_none"
     )]
     pub record_digest: Option<Cow<'a, str>>,
@@ -605,6 +610,27 @@ mod tests {
         assert_eq!(entry.fields.offset, Some(784));
         assert_eq!(entry.fields.extra["custom"], true);
         assert!(matches!(entry.fields.url, Cow::Borrowed(_)));
+        Ok(())
+    }
+
+    /// Classic CDX writes `-` for an absent value, and indexes converted from it may keep the
+    /// placeholder. It must not fail the line or satisfy conformance.
+    #[test]
+    fn placeholders_in_standard_fields_are_absent() -> Result<(), Box<dyn std::error::Error>> {
+        let entry = Entry::parse(concat!(
+            "com,example)/ 20201007212236 {\"url\":\"https://example.com/\",",
+            "\"digest\":\"-\",\"mime\":\"-\",\"status\":\"-\",\"offset\":\"-\",",
+            "\"length\":\"-\",\"filename\":\"-\",\"recordDigest\":\"-\"}",
+        ))?;
+        assert_eq!(
+            entry,
+            Entry::parse("com,example)/ 20201007212236 {\"url\":\"https://example.com/\"}")?
+        );
+        assert!(matches!(
+            entry.validate(),
+            Err(ConformanceError::Missing(missing))
+                if missing == ["digest", "mime", "status", "offset", "length", "filename"]
+        ));
         Ok(())
     }
 
