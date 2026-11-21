@@ -162,6 +162,22 @@ jobs:
           cargo test --locked --workspace --features archivindex-surt/url
 
   msrv:
+    name: Rust 1.88 compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.88.0
+      - uses: Swatinem/rust-cache@v2
+      # These packages set their own, newer rust-version.
+      - name: Check workspace
+        run: >-
+          cargo check --locked --workspace --all-targets --all-features
+          --exclude archivindex-http-client --exclude archivindex-http-client-challenge
+          --exclude cargo-archivindex-build
+
+  msrv-http-client:
     name: Rust 1.100 compatibility
     runs-on: ubuntu-latest
     steps:

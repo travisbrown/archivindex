@@ -6,7 +6,7 @@ resolver = "3"
 authors = ["Travis Brown <travisrobertbrown@gmail.com>"]
 repository = "https://github.com/travisbrown/archivindex"
 edition = "2024"
-rust-version = "1.100"
+rust-version = "1.88"
 license = "MIT OR Apache-2.0"
 version = "0.1.0"
 
@@ -88,3 +88,18 @@ reason = "Preserve the HTTP crate's GPL-3.0-only license."
 package = "archivindex-http-client-challenge"
 rule = "package.license"
 reason = "Preserve the HTTP crate's GPL-3.0-only license."
+
+[[workspace.metadata.archivindex-build.exemptions]]
+package = "archivindex-http-client"
+rule = "package.rust-version"
+reason = "The wreq feature's patched HTTP stack requires Rust 1.100."
+
+[[workspace.metadata.archivindex-build.exemptions]]
+package = "archivindex-http-client-challenge"
+rule = "package.rust-version"
+reason = "Depends on the HTTP client, which requires Rust 1.100."
+
+[[workspace.metadata.archivindex-build.exemptions]]
+package = "cargo-archivindex-build"
+rule = "package.rust-version"
+reason = "The unpublished build tool tracks the current stable toolchain."

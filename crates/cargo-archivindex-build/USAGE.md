@@ -51,11 +51,11 @@ reason = "The shared declaration enables `derive`, which this crate implements b
 
 Exemptions support three categories:
 
-| Rule                                 | Waives                                                                              |
-| ------------------------------------ | ----------------------------------------------------------------------------------- |
-| `package.authors`, `package.license` | Inheritance of the named field, for a crate carrying its own authorship or license. |
-| `lints.workspace`                    | Inheritance of the workspace lints, for a package that must relax one.              |
-| `dependencies.<name>`                | Workspace inheritance for a dependency that must be configured per package.         |
+| Rule                                                         | Waives                                                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `package.authors`, `package.license`, `package.rust-version` | Inheritance of the named field, for a crate carrying its own authorship, license, or MSRV. |
+| `lints.workspace`                                            | Inheritance of the workspace lints, for a package that must relax one.                     |
+| `dependencies.<name>`                                        | Workspace inheritance for a dependency that must be configured per package.                |
 
 Every entry must name a package and give a non-empty `reason`. `sync` skips the named rule for that
 package and applies the others as usual. `check` reports exemptions that are no longer needed so

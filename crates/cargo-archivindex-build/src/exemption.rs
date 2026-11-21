@@ -16,7 +16,7 @@ const DEPENDENCY_PREFIX: &str = "dependencies.";
 const PACKAGE_PREFIX: &str = "package.";
 
 /// Package metadata fields that may be exempted from workspace inheritance.
-const PACKAGE_FIELDS: [&str; 2] = ["authors", "license"];
+const PACKAGE_FIELDS: [&str; 3] = ["authors", "license", "rust-version"];
 
 /// A rule that a package may be exempted from: metadata inheritance, lint inheritance, or
 /// dependency inheritance. Other policy rules cannot be exempted.

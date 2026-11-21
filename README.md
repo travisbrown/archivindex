@@ -42,8 +42,9 @@ Each repository is a separate Cargo workspace.
 
 ## Development
 
-The workspace requires Rust 1.100 or later. The HTTP client's optional `wreq` feature also requires
-C and C++ compilers, CMake, and libclang. See the HTTP client's
+The published libraries require Rust 1.88 or later. The HTTP client crates and the build tool
+require Rust 1.100 or later, and the HTTP client's optional `wreq` feature also requires C and C++
+compilers, CMake, and libclang. See the HTTP client's
 [build guide](crates/archivindex-http-client/BUILDING.md) for dependency patches required by
 consuming workspaces.
 
