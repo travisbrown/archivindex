@@ -21,7 +21,6 @@
 //! pending.publish()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
-#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use std::ffi::OsStr;
 use std::fs::{File, OpenOptions};

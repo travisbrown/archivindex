@@ -27,7 +27,6 @@
 //! assert_eq!(text, "3I42H3S6NNFQ2MSVX7XZKYAYSCX5QBYJ");
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
-#![cfg_attr(docsrs, feature(doc_cfg))]
 
 /// How one kind of digest is written as text.
 ///

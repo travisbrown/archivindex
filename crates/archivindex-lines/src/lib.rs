@@ -21,7 +21,6 @@
 //! assert_eq!(lines.next_content()?, None);
 //! # Ok::<(), archivindex_lines::Error>(())
 //! ```
-#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use std::io::{BufRead, Read};
 
