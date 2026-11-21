@@ -7,7 +7,7 @@
 use std::io::{ErrorKind, Read, Write};
 use std::net::{IpAddr, ToSocketAddrs};
 
-use crate::InvalidProxy;
+use crate::ProxyError;
 
 #[derive(Clone)]
 pub struct Proxy {
@@ -29,33 +29,33 @@ impl std::fmt::Debug for Proxy {
 }
 
 impl Proxy {
-    pub fn parse(value: &str) -> Result<Self, InvalidProxy> {
+    pub fn parse(value: &str) -> Result<Self, ProxyError> {
         let url = url::Url::parse(value)?;
         let remote_dns = match url.scheme() {
             "socks5" => false,
             "socks5h" => true,
-            _ => return Err(InvalidProxy::UnsupportedScheme),
+            _ => return Err(ProxyError::UnsupportedScheme),
         };
         if !matches!(url.path(), "" | "/") {
-            return Err(InvalidProxy::UnsupportedPath);
+            return Err(ProxyError::UnsupportedPath);
         }
         if url.query().is_some() {
-            return Err(InvalidProxy::UnsupportedQuery);
+            return Err(ProxyError::UnsupportedQuery);
         }
         if url.fragment().is_some() {
-            return Err(InvalidProxy::UnsupportedFragment);
+            return Err(ProxyError::UnsupportedFragment);
         }
         let host = url
             .host_str()
             .filter(|host| !host.is_empty())
-            .ok_or(InvalidProxy::MissingHost)?;
+            .ok_or(ProxyError::MissingHost)?;
         let host = host
             .trim_start_matches('[')
             .trim_end_matches(']')
             .to_owned();
         let port = url.port().unwrap_or(1080);
         if port == 0 {
-            return Err(InvalidProxy::ZeroPort);
+            return Err(ProxyError::ZeroPort);
         }
         let uri = fluent_uri::Uri::parse(url.as_str())?;
         let credentials = uri
@@ -64,13 +64,13 @@ impl Proxy {
             .map(|userinfo| {
                 let (user, password) = userinfo
                     .split_once(':')
-                    .ok_or(InvalidProxy::MissingPassword)?;
+                    .ok_or(ProxyError::MissingPassword)?;
                 let user = user.decode().to_bytes().into_owned();
                 let password = password.decode().to_bytes().into_owned();
                 if !(1..=255).contains(&user.len()) {
-                    Err(InvalidProxy::InvalidUsernameLength)
+                    Err(ProxyError::InvalidUsernameLength)
                 } else if !(1..=255).contains(&password.len()) {
-                    Err(InvalidProxy::InvalidPasswordLength)
+                    Err(ProxyError::InvalidPasswordLength)
                 } else {
                     Ok((user, password))
                 }
@@ -197,26 +197,26 @@ mod tests {
     use std::error::Error as _;
 
     use super::Proxy;
-    use crate::InvalidProxy;
+    use crate::ProxyError;
 
     #[test]
     fn configuration_errors_identify_invalid_components() {
         for (uri, expected) in [
-            ("http://localhost:1080", InvalidProxy::UnsupportedScheme),
-            ("socks4://localhost:1080", InvalidProxy::UnsupportedScheme),
-            ("socks5h://", InvalidProxy::MissingHost),
-            ("socks5h://localhost:0", InvalidProxy::ZeroPort),
-            ("socks5h://localhost/path", InvalidProxy::UnsupportedPath),
-            ("socks5h://localhost?query", InvalidProxy::UnsupportedQuery),
+            ("http://localhost:1080", ProxyError::UnsupportedScheme),
+            ("socks4://localhost:1080", ProxyError::UnsupportedScheme),
+            ("socks5h://", ProxyError::MissingHost),
+            ("socks5h://localhost:0", ProxyError::ZeroPort),
+            ("socks5h://localhost/path", ProxyError::UnsupportedPath),
+            ("socks5h://localhost?query", ProxyError::UnsupportedQuery),
             (
                 "socks5h://localhost#fragment",
-                InvalidProxy::UnsupportedFragment,
+                ProxyError::UnsupportedFragment,
             ),
-            ("socks5h://secret@localhost", InvalidProxy::MissingPassword),
-            ("socks5h://secret:@localhost", InvalidProxy::MissingPassword),
+            ("socks5h://secret@localhost", ProxyError::MissingPassword),
+            ("socks5h://secret:@localhost", ProxyError::MissingPassword),
             (
                 "socks5h://:secret@localhost",
-                InvalidProxy::InvalidUsernameLength,
+                ProxyError::InvalidUsernameLength,
             ),
         ] {
             let error = Proxy::parse(uri).unwrap_err();
@@ -233,11 +233,11 @@ mod tests {
         let oversized = "x".repeat(256);
         assert!(matches!(
             Proxy::parse(&format!("socks5h://{oversized}:secret@localhost")),
-            Err(InvalidProxy::InvalidUsernameLength)
+            Err(ProxyError::InvalidUsernameLength)
         ));
         assert!(matches!(
             Proxy::parse(&format!("socks5h://secret:{oversized}@localhost")),
-            Err(InvalidProxy::InvalidPasswordLength)
+            Err(ProxyError::InvalidPasswordLength)
         ));
     }
 
@@ -251,7 +251,7 @@ mod tests {
             let error = Proxy::parse(uri).unwrap_err();
             assert!(matches!(
                 &error,
-                InvalidProxy::InvalidUrl(url::ParseError::InvalidPort)
+                ProxyError::InvalidUrl(url::ParseError::InvalidPort)
             ));
             assert_eq!(
                 error.source().unwrap().downcast_ref::<url::ParseError>(),
@@ -261,7 +261,7 @@ mod tests {
             assert!(!format!("{error:?}").contains("secret"));
         }
         let error = Proxy::parse("socks5h://secret:%gg@localhost").unwrap_err();
-        assert!(matches!(&error, InvalidProxy::InvalidUri(_)));
+        assert!(matches!(&error, ProxyError::InvalidUri(_)));
         assert!(error.source().unwrap().is::<fluent_uri::ParseError>());
         assert!(!error.to_string().contains("secret"));
         assert!(!format!("{error:?}").contains("secret"));

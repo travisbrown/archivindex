@@ -78,7 +78,7 @@
 //! use archivindex_http_client::recorder::Recorder;
 //!
 //! let client = Recorder::new().proxy(Some("socks5h://127.0.0.1:1080"))?;
-//! # Ok::<(), archivindex_http_client::InvalidProxy>(())
+//! # Ok::<(), archivindex_http_client::ProxyError>(())
 //! ```
 
 mod chunked;
@@ -183,7 +183,7 @@ pub enum Error {
 /// Every client accepts the same proxies: `socks5://` and `socks5h://` URIs with a host, an
 /// optional port, and optional username and password credentials.
 #[derive(Debug, thiserror::Error)]
-pub enum InvalidProxy {
+pub enum ProxyError {
     /// The scheme is neither `socks5` nor `socks5h`.
     #[error("invalid proxy: expected socks5:// or socks5h://")]
     UnsupportedScheme,

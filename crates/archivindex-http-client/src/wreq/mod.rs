@@ -54,7 +54,7 @@ use serde::ser::Serialize;
 use wreq_util::Profile;
 
 use crate::{
-    Client, DEFAULT_MAX_RESPONSE_LENGTH, DEFAULT_TIMEOUT, Engine, Error, Exchange, InvalidProxy,
+    Client, DEFAULT_MAX_RESPONSE_LENGTH, DEFAULT_TIMEOUT, Engine, Error, Exchange, ProxyError,
     Request, failure, runtime, socks,
 };
 
@@ -129,12 +129,12 @@ impl WreqClient {
     ///
     /// # Errors
     ///
-    /// Returns [`InvalidProxy`] for a malformed or unsupported URI.
-    pub fn proxy(mut self, proxy: Option<&str>) -> Result<Self, InvalidProxy> {
+    /// Returns [`ProxyError`] for a malformed or unsupported URI.
+    pub fn proxy(mut self, proxy: Option<&str>) -> Result<Self, ProxyError> {
         self.proxy = proxy
             .map(|proxy| {
                 socks::Proxy::parse(proxy)?;
-                wreq::Proxy::all(proxy).map_err(InvalidProxy::Wreq)
+                wreq::Proxy::all(proxy).map_err(ProxyError::Wreq)
             })
             .transpose()?;
         Ok(self)

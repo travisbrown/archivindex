@@ -39,7 +39,7 @@ use crate::framing::{ResponseCapture, ResponseError, Truncation};
 use crate::reconstruct::reconstruct_response_with_reason;
 use crate::{
     Client, DEFAULT_MAX_RESPONSE_LENGTH, DEFAULT_TIMEOUT, Engine, Error, Exchange, Fidelity,
-    HttpProtocol, InvalidProxy, Request, TlsVersion, chunked, failure, runtime, socks, tls,
+    HttpProtocol, ProxyError, Request, TlsVersion, chunked, failure, runtime, socks, tls,
 };
 
 /// Performs HTTP/1.1 exchanges with `reqwest` and reconstructs their messages.
@@ -74,12 +74,12 @@ impl ReqwestClient {
     ///
     /// Use `socks5://` to resolve the target locally or `socks5h://` to have the proxy resolve it.
     /// Both accept optional username and password credentials. Environment proxy settings are
-    /// ignored. Invalid or unsupported URIs return [`InvalidProxy`].
-    pub fn proxy(mut self, proxy: Option<&str>) -> Result<Self, InvalidProxy> {
+    /// ignored. Invalid or unsupported URIs return [`ProxyError`].
+    pub fn proxy(mut self, proxy: Option<&str>) -> Result<Self, ProxyError> {
         self.proxy = proxy
             .map(|proxy| {
                 socks::Proxy::parse(proxy)?;
-                reqwest::Proxy::all(proxy).map_err(InvalidProxy::Reqwest)
+                reqwest::Proxy::all(proxy).map_err(ProxyError::Reqwest)
             })
             .transpose()?;
 

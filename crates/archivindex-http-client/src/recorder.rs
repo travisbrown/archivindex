@@ -30,7 +30,7 @@ use crate::read::read_response;
 use crate::reconstruct::reconstruct_request;
 use crate::{
     Client, DEFAULT_MAX_RESPONSE_LENGTH, DEFAULT_TIMEOUT, Engine, Error, Exchange, Fidelity,
-    HttpProtocol, InvalidProxy, Request, TlsVersion, request, socks, tls,
+    HttpProtocol, ProxyError, Request, TlsVersion, request, socks, tls,
 };
 
 /// An HTTP/1.1 client that records the exact bytes of one exchange per fetch.
@@ -61,8 +61,8 @@ impl Recorder {
     ///
     /// `socks5://` resolves target hostnames locally; `socks5h://` sends them to the proxy.
     /// Both accept optional username and password credentials. Environment proxy settings are
-    /// ignored. Invalid or unsupported URIs return [`InvalidProxy`].
-    pub fn proxy(mut self, proxy: Option<&str>) -> Result<Self, InvalidProxy> {
+    /// ignored. Invalid or unsupported URIs return [`ProxyError`].
+    pub fn proxy(mut self, proxy: Option<&str>) -> Result<Self, ProxyError> {
         self.proxy = proxy.map(socks::Proxy::parse).transpose()?;
         Ok(self)
     }

@@ -38,7 +38,7 @@ impl std::fmt::Display for MatchType {
 }
 
 impl FromStr for MatchType {
-    type Err = InvalidMatchType;
+    type Err = MatchTypeError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
@@ -46,7 +46,7 @@ impl FromStr for MatchType {
             "prefix" => Ok(Self::Prefix),
             "host" => Ok(Self::Host),
             "domain" => Ok(Self::Domain),
-            _ => Err(InvalidMatchType(value.to_owned())),
+            _ => Err(MatchTypeError(value.to_owned())),
         }
     }
 }
@@ -54,7 +54,7 @@ impl FromStr for MatchType {
 /// A value is not one of the match scopes supported by the CDX server.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 #[error("invalid CDX match type: {0}")]
-pub struct InvalidMatchType(String);
+pub struct MatchTypeError(String);
 
 /// Parameters for one CDX server query.
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -93,7 +93,7 @@ impl Request {
 
 #[cfg(test)]
 mod tests {
-    use super::{InvalidMatchType, MatchType, Request};
+    use super::{MatchType, MatchTypeError, Request};
 
     #[test]
     fn match_types_round_trip_through_their_protocol_values() {
@@ -112,7 +112,7 @@ mod tests {
     fn an_unknown_scope_is_rejected() {
         assert_eq!(
             "everything".parse::<MatchType>(),
-            Err(InvalidMatchType("everything".to_owned()))
+            Err(MatchTypeError("everything".to_owned()))
         );
     }
 
