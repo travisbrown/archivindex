@@ -98,6 +98,9 @@ struct Layout {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Canonicalizer {
     /// Drop a leading `www`, `www2`, ... host label.
+    ///
+    /// Only one label is dropped, as in the Python `surt` library, so unlike the other rules this
+    /// one is not idempotent (e.g. `www.www2.example.com` becomes `www2.example.com`).
     pub strip_www: bool,
     /// Remove known session identifiers (`jsessionid`, `phpsessid`, `sid`, `ASPSESSIONID`,
     /// `cfid`, `cftoken`, and ASP.NET cookieless path segments) from the path and query.
